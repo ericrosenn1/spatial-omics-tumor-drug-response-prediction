@@ -1,0 +1,20 @@
+{
+  "project_root": "D:\\Adv_Omics_Fenyo\\project",
+  "model_root": "D:\\Adv_Omics_Fenyo\\project\\prediction_modeling_pipeline\\prediction_interpretation_model",
+  "source_of_truth_v2_full_run_root": "D:\\Adv_Omics_Fenyo\\project\\prediction_modeling_pipeline\\spatial_prediction_model_V2\\outputs\\v2_full_run_20260507_115000",
+  "output_root": "D:\\Adv_Omics_Fenyo\\project\\prediction_modeling_pipeline\\prediction_interpretation_model\\outputs\\prediction_interpretation_model_full_20260507_143603",
+  "expected_counts": {
+    "pair_rows": 34881,
+    "samples": 102,
+    "treatments": 374,
+    "strict_biology_features": 139,
+    "label_shuffle_validated_treatments": 27,
+    "recurrent_biology_themes": 11
+  },
+  "policy": {
+    "rerun_v2": false,
+    "open_model_selection": false,
+    "deprecated_outputs_as_source_truth": false,
+    "clinical_recommendations": false
+  }
+}

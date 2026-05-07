@@ -1,0 +1,14 @@
+{
+  "description": "Example configuration values for running prediction_interpretation_model against a completed spatial_prediction_model_V2 run.",
+  "project_root": "D:/path/to/project",
+  "model_root": "D:/path/to/project/prediction_modeling_pipeline/prediction_interpretation_model",
+  "v2_run_root": "D:/path/to/project/prediction_modeling_pipeline/spatial_prediction_model_V2/outputs/v2_full_run_TIMESTAMP",
+  "output_root": "D:/path/to/project/prediction_modeling_pipeline/prediction_interpretation_model/outputs/prediction_interpretation_model_full_local",
+  "steps": "all",
+  "policy": {
+    "consume_v2_outputs_only": true,
+    "open_model_selection": false,
+    "use_deprecated_outputs_as_source_truth": false,
+    "clinical_recommendations": false
+  }
+}

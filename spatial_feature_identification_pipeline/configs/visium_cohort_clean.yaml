@@ -1,0 +1,39 @@
+project_name: visium_cohort_clean
+input_root: D:\Adv_Omics_Fenyo\project\Visium_samples\visium_cohort_clean
+output_root: D:\Adv_Omics_Fenyo\project\spatial_feature_identification_pipeline\outputs
+sample_glob: SAMPLE_*
+steps:
+  validate_inputs: true
+  process_samples: true
+  merge_slide_features: true
+  score_and_label_slides: true
+  append_signature_scores: true
+  build_accessibility_profiles: true
+  append_hotspot_metrics: true
+  add_metabolic_concordance: true
+  build_motif_tables: true
+  build_model_ready_table: true
+external_validation:
+  output_subdir: output_13_external_study_validation
+  hepatoblastoma:
+    dataset_id: GSE261958
+    cancer_type: hepatoblastoma
+    study_png_dir: outputs/_external_study_validation/hepatoblastoma/manual_comparison_SHORTLIST_20260504_061657/study_pngs_to_create
+    samples:
+      H1190: SAMPLE_0012
+      H391: SAMPLE_0026
+      H1226: SAMPLE_0016
+      H388: SAMPLE_0024
+      H691: SAMPLE_0028
+      H1180: SAMPLE_0010
+  pdac:
+    dataset_id: GSE282302
+    cancer_type: pdac
+    supplementary_table_dir: outputs/_external_study_validation/pdac/source_data/supplementary_tables
+    study_png_dir: outputs/_external_study_validation/pdac/study_pngs_to_create
+    samples:
+      C1_D10_ROI1_s1: SAMPLE_0065
+      C2_D11_ROI1_s1: SAMPLE_0066
+      C3_D12_ROI1_s1: SAMPLE_0067
+
+

@@ -1,0 +1,18 @@
+﻿project_name: visium_5_sample_test
+
+input_root: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project/spatial_feature_identification_pipeline/test_inputs/visium_5_sample_test"
+output_root: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project/spatial_feature_identification_pipeline/outputs/test"
+
+sample_glob: "SAMPLE_*"
+
+steps:
+  validate_inputs: true
+  process_samples: true
+  merge_slide_features: true
+  score_and_label_slides: true
+  append_signature_scores: true
+  build_accessibility_profiles: true
+  append_hotspot_metrics: true
+  add_metabolic_concordance: true
+  build_motif_tables: true
+  build_model_ready_table: true

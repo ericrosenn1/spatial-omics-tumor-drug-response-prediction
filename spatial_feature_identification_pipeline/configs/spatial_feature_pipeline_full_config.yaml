@@ -1,0 +1,244 @@
+# spatial_feature_pipeline_full_config.yaml
+# Full documented configuration for the spatial feature identification pipeline.
+# Current scripts definitely read input_root, output_root, sample_glob, and sometimes steps.
+# Step specific sections document intended settings and command line values.
+# Some step specific settings require script patches before they are read directly from YAML.
+
+project:
+  name: visium_cohort_clean
+  pipeline_name: spatial_feature_identification_pipeline
+  pipeline_root: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project/spatial_feature_identification_pipeline"
+  project_root: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project"
+  created_for: full_102_sample_spatial_feature_run
+
+paths:
+  input_root: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project/Visium_samples/visium_cohort_clean"
+  output_root: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project/spatial_feature_identification_pipeline/outputs"
+  code_root: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project/spatial_feature_identification_pipeline/code"
+  config_root: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project/spatial_feature_identification_pipeline/configs"
+  library_root: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project/spatial_feature_identification_pipeline/code/lib"
+
+input_root: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project/Visium_samples/visium_cohort_clean"
+output_root: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project/spatial_feature_identification_pipeline/outputs"
+sample_glob: "SAMPLE_*"
+
+sample_selection:
+  include_pattern: "SAMPLE_*"
+  exclude_samples: ["SAMPLE_0049"]
+  reason_for_exclusion:
+    SAMPLE_0049: "Previously skipped because transcriptome QC failed or no spots passed QC."
+  expected_input_samples: 103
+  expected_analysis_samples: 102
+
+runtime:
+  python_executable: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project/.venv/Scripts/python.exe"
+  working_directory: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project/spatial_feature_identification_pipeline"
+  use_project_venv: true
+  recommended_workers_for_step_05: 3
+  urgent_runtime_profile: true
+  notes: "For urgent runs, use reactome_max_terms 25 and skip visualization steps 11 and 12 until later."
+
+steps:
+  validate_inputs: true
+  process_samples: true
+  merge_slide_features: true
+  score_and_label_slides: true
+  build_multi_axis_transcriptome_labels: true
+  build_accessibility_profiles: true
+  append_hotspot_metrics: true
+  add_context_alignment: true
+  build_motif_tables: true
+  build_model_ready_table: true
+  overlay: false
+  data_analysis_and_visuals: false
+
+outputs:
+  output_01_validate_inputs: "outputs/output_01_validate_inputs"
+  output_02_01_process_samples_data: "outputs/output_02_01_process_samples_data"
+  output_02_process_samples_reports: "outputs/output_02_process_samples_reports"
+  output_03_merge_slide_features: "outputs/output_03_merge_slide_features"
+  output_04_score_and_label_slides: "outputs/output_04_score_and_label_slides"
+  output_05_build_multi_axis_transcriptome_labels: "outputs/output_05_build_multi_axis_transcriptome_labels"
+  output_06_build_accessibility_profiles: "outputs/output_06_build_accessibility_profiles"
+  output_07_append_hotspot_metrics: "outputs/output_07_append_hotspot_metrics"
+  output_08_context_alignment_and_metabolic_concordance: "outputs/output_08_context_alignment_and_metabolic_concordance"
+  output_09_build_motif_tables: "outputs/output_09_build_motif_tables"
+  output_10_build_model_ready_table: "outputs/output_10_build_model_ready_table"
+  output_11_overlay: "outputs/output_11_overlay"
+  output_12_data_analysis_and_visuals: "outputs/output_12_data_analysis_and_visuals"
+
+pipeline_order:
+  step_01:
+    script: "code/01_validate_inputs.py"
+    enabled: true
+    purpose: validate_raw_visium_inputs
+    key_outputs:
+      report: "output_01_validate_inputs/input_validation_report.csv"
+      summary: "output_01_validate_inputs/input_validation_summary.txt"
+    command: "python code/01_validate_inputs.py --config configs/visium_cohort_clean.yaml"
+
+  step_02:
+    script: "code/02_process_samples.py"
+    enabled: true
+    purpose: process_each_sample_to_cleaned_clustered_h5ad
+    key_outputs:
+      data_folder: "output_02_01_process_samples_data"
+      report: "output_02_process_samples_reports/processing_report.csv"
+      summary: "output_02_process_samples_reports/processing_summary.txt"
+    command: "python code/02_process_samples.py --config configs/visium_cohort_clean.yaml"
+
+  step_03:
+    script: "code/03_merge_slide_features.py"
+    enabled: true
+    purpose: merge_per_sample_slide_feature_rows
+    key_outputs:
+      merged_features: "output_03_merge_slide_features/merged_slide_features.csv"
+      merge_report: "output_03_merge_slide_features/merge_report.csv"
+    command: "python code/03_merge_slide_features.py --config configs/visium_cohort_clean.yaml"
+
+  step_04:
+    script: "code/04_score_and_label_slides.py"
+    enabled: true
+    purpose: score_and_label_merged_slide_features
+    key_outputs:
+      labeled_table: "output_04_score_and_label_slides/slide_features_scored_labeled.csv"
+      label_counts: "output_04_score_and_label_slides/label_counts.csv"
+    command: "python code/04_score_and_label_slides.py --config configs/visium_cohort_clean.yaml"
+
+  step_05:
+    script: "code/05_build_multi_axis_transcriptome_labels.py"
+    enabled: true
+    purpose: canonical_structure_function_metabolism_transcriptome_labels
+    replaces: ["05_append_signature_scores.py", "05.1_better_transcriptome_scoring.py", "05.2_multi_axis_transcriptome_scoring.py", "05.3_multi_axis_transcriptome_figures.py"]
+    run_mode: parallel_per_sample_then_merge
+    reactome_max_terms: 25
+    full_precision_reactome_max_terms: 75
+    ucell_n_jobs: 1
+    skip_ucell: false
+    skip_custom_gsva: false
+    skip_hallmark_gsva: false
+    skip_reactome_gsva: false
+    per_sample_only: true
+    merge_only: false
+    key_outputs:
+      per_sample_labels: "output_05_build_multi_axis_transcriptome_labels/per_sample/<sample_id>_spot_labels.csv"
+      per_sample_scores: "output_05_build_multi_axis_transcriptome_labels/per_sample/<sample_id>_spot_scores.csv"
+      per_sample_h5ad: "output_05_build_multi_axis_transcriptome_labels/per_sample_h5ad/<sample_id>_with_multi_axis_transcriptome_labels.h5ad"
+      per_sample_status: "output_05_build_multi_axis_transcriptome_labels/per_sample_status/<sample_id>_status.csv"
+      slide_summary: "output_05_build_multi_axis_transcriptome_labels/multi_axis_slide_summary.csv"
+      merged_slide_features: "output_05_build_multi_axis_transcriptome_labels/slide_features_with_multi_axis_labels.csv"
+    single_sample_command: "python code/05_build_multi_axis_transcriptome_labels.py --config configs/visium_cohort_clean.yaml --sample-id SAMPLE_0000 --per-sample-only --overwrite --reactome-max-terms 25"
+    merge_command: "python code/05_build_multi_axis_transcriptome_labels.py --config configs/visium_cohort_clean.yaml --merge-only --reactome-max-terms 25"
+
+  step_06:
+    script: "code/06_build_accessibility_profiles.py"
+    enabled: true
+    purpose: tumor_boundary_accessibility_and_barrier_profiles
+    depends_on: "step_05"
+    key_outputs:
+      slide_accessibility_profiles: "output_06_build_accessibility_profiles/slide_accessibility_profiles.csv"
+      merged_table: "output_06_build_accessibility_profiles/slide_features_with_accessibility.csv"
+      per_sample_profiles: "output_06_build_accessibility_profiles/per_sample/<sample_id>_accessibility_spot_profile.csv"
+    command: "python code/06_build_accessibility_profiles.py --config configs/visium_cohort_clean.yaml"
+
+  step_07:
+    script: "code/07_append_hotspot_metrics.py"
+    enabled: true
+    purpose: hotspot_masks_and_spatial_hotspot_metrics
+    depends_on: "step_06"
+    key_outputs:
+      hotspot_summary: "output_07_append_hotspot_metrics/hotspot_slide_summary.csv"
+      merged_table: "output_07_append_hotspot_metrics/slide_features_with_hotspot_metrics.csv"
+      per_sample_masks: "output_07_append_hotspot_metrics/per_sample/<sample_id>_hotspot_spot_masks.csv"
+    command: "python code/07_append_hotspot_metrics.py --config configs/visium_cohort_clean.yaml"
+
+  step_08:
+    script: "code/08_add_context_alignment.py"
+    enabled: true
+    purpose: metabolic_context_alignment_and_concordance
+    depends_on: "step_07"
+    key_outputs:
+      concordance_summary: "output_08_context_alignment_and_metabolic_concordance/metabolic_concordance_summary.csv"
+      merged_table: "output_08_context_alignment_and_metabolic_concordance/slide_features_with_metabolic_concordance.csv"
+    command: "python code/08_add_context_alignment.py --config configs/visium_cohort_clean.yaml"
+
+  step_09:
+    script: "code/09_build_motif_tables.py"
+    enabled: true
+    purpose: motif_tables_pairwise_relationships_and_gradients
+    depends_on: "step_08"
+    key_outputs:
+      all_motif_table: "output_09_build_motif_tables/all_motif_table.csv"
+      all_pair_table: "output_09_build_motif_tables/all_pair_table.csv"
+      all_gradient_table: "output_09_build_motif_tables/all_gradient_table.csv"
+      merged_table: "output_09_build_motif_tables/slide_features_with_motif_tables.csv"
+    command: "python code/09_build_motif_tables.py --config configs/visium_cohort_clean.yaml"
+
+  step_10:
+    script: "code/10_build_model_ready_table.py"
+    enabled: true
+    purpose: final_numeric_feature_table_for_modeling
+    depends_on: "step_09"
+    key_outputs:
+      model_input_numeric: "output_10_build_model_ready_table/model_input_numeric.csv"
+      feature_manifest: "output_10_build_model_ready_table/feature_manifest.csv"
+      missingness_report: "output_10_build_model_ready_table/missingness_report.csv"
+      feature_filter_report: "output_10_build_model_ready_table/feature_filter_report.csv"
+    command: "python code/10_build_model_ready_table.py --config configs/visium_cohort_clean.yaml"
+
+  step_11:
+    script: "code/11_overlay.py"
+    enabled: false
+    purpose: optional_histology_overlays
+    depends_on: "step_07_and_step_05"
+    key_outputs:
+      output_folder: "output_11_overlay/<sample_id>"
+      combined: "combined_region_overlay.html"
+      structure: "fine_structure_region_overlay.html"
+      function: "functional_region_overlay.html"
+      metabolism: "metabolic_region_overlay.html"
+    command: "python code/11_overlay.py --config configs/visium_cohort_clean.yaml --no-png"
+
+  step_12:
+    script: "code/12_data_analysis_and_visuals.py"
+    enabled: false
+    purpose: optional_final_visuals_and_region_overlays
+    depends_on: "step_05_and_spatial_images"
+    note: "Current script may need input_subdir patched from output_05.2_multi_axis_transcriptome_scoring to output_05_build_multi_axis_transcriptome_labels before use."
+    key_outputs:
+      output_folder: "output_12_data_analysis_and_visuals"
+    command: "python code/12_data_analysis_and_visuals.py --config configs/visium_cohort_clean.yaml --overwrite"
+
+feature_handoff:
+  required_for_modeling:
+    merged_slide_features: "output_03_merge_slide_features/merged_slide_features.csv"
+    model_input_numeric: "output_10_build_model_ready_table/model_input_numeric.csv"
+    feature_manifest: "output_10_build_model_ready_table/feature_manifest.csv"
+  fast_deadline_alternative:
+    model_ready_from_step_05_only: "outputs/fast_model_ready_from_05"
+    note: "Use only if 06 to 09 cannot finish before deadline."
+
+run_profiles:
+  full_feature_run_under_deadline:
+    step_05_workers: 3
+    step_05_reactome_max_terms: 25
+    run_steps: "05_merge_then_06_07_08_09_10"
+    skip_steps: "11_12"
+
+  full_precision_transcriptome_run:
+    step_05_workers: 3
+    step_05_reactome_max_terms: 75
+    run_steps: "05_merge_then_06_07_08_09_10"
+    skip_steps: "11_12_until_later"
+
+  visualization_run:
+    run_steps: "11_12"
+    no_png_for_speed: true
+    requires_plotly: true
+    requires_kaleido_for_png: true
+
+current_script_support:
+  definitely_read_by_lib_config: ["input_root", "output_root", "sample_glob", "steps"]
+  step_specific_yaml_support: "partial_or_documentation_only"
+  note: "Most scripts currently use constants and command line arguments. This file is a full run contract. To make every setting active, scripts should be patched to read their own section."
+

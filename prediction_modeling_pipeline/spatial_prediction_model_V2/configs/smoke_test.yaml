@@ -1,0 +1,5 @@
+version: 2
+mode: smoke
+max_workers: 0
+step09_n_shuffles: 25
+step09_n_repeats: 3

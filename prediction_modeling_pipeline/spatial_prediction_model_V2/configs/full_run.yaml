@@ -1,0 +1,5 @@
+version: 2
+mode: full
+max_workers: 0
+step09_n_shuffles: 100
+step09_n_repeats: 5

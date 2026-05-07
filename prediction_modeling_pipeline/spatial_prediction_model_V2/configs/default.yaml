@@ -1,0 +1,12 @@
+version: 2
+
+inputs:
+  handoff_root: "<PATH_TO_TEACHER_BUILDER_HANDOFF>"
+
+targets:
+  probability_baseline: "fused_prob_responder"
+  residual_pair: "fused_residual_vs_prior"
+
+worker_policy:
+  max_workers: 0
+  xgboost_inner_n_jobs: 1

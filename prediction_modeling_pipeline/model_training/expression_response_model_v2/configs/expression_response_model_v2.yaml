@@ -1,0 +1,122 @@
+# ============================================================
+# Config: expression_response_model_v2.yaml
+# ============================================================
+#
+# Purpose:
+#   Configuration for the deployable expression-response model v2 workflow.
+#
+# Project context:
+#   This YAML controls the numbered expression_response_model_v2 scripts:
+#   treatment ontology construction, input validation, canonical training-table
+#   construction, calibrated deployable model training, model audit, and optional
+#   Visium pseudobulk teacher scoring.
+#
+# Scientific role:
+#   The values below define the clinical-expression training source, canonical
+#   identifier columns, expression-gene feature prefix, cross-validation/modeling
+#   parameters, teacher-approval quality gates, and Visium teacher-scoring
+#   behavior. The documentation comments are non-executable and should not
+#   change any parsed config values.
+#
+# Documentation polish marker:
+#   EXPRESSION_MODEL_V2_YAML_DOC_POLISH_V1
+#
+# Important:
+#   This documentation pass is intentionally non-behavioral. Comments may be
+#   added, but YAML keys and values must remain unchanged.
+# ============================================================
+# ------------------------------------------------------------
+# Project and training input paths
+# ------------------------------------------------------------
+# project_root anchors all relative paths used by the pipeline.
+project_root: "D:/Adv_Omics_Fenyo/project"
+
+# GDC expression-response source table used to build canonical training data.
+input_training_table: "prediction_modeling_pipeline/data_manifests/gdc_expression_training_data/treatment_filtered_outputs/training_table_CH1_tpm_unstranded.tsv"
+
+# Deployable model outputs, audits, CV predictions, and model indexes are written here.
+output_root: "prediction_modeling_pipeline/model_training/expression_response_model_v2/outputs/deployable_CH1"
+
+
+# ------------------------------------------------------------
+# Source-table column mapping
+# ------------------------------------------------------------
+# These columns define case identity, treatment label, response label, and gene features.
+case_col: "cases.case_id"
+# Raw treatment labels are canonicalized before model grouping.
+drug_col: "resolved_drug"
+# Response labels are encoded into binary responder/non-responder targets.
+response_col: "resolved_episode_binary_response"
+# Gene-expression feature columns are detected by this prefix.
+gene_prefix: "ENSG"
+
+
+# ------------------------------------------------------------
+# Reproducibility and cross-validation
+# ------------------------------------------------------------
+# random_state keeps PCA/logistic regression behavior reproducible where applicable.
+random_state: 42
+# Grouped cross-validation fold count for treatment-specific model audit.
+cv_n_splits: 5
+
+
+# ------------------------------------------------------------
+# Minimum treatment support thresholds
+# ------------------------------------------------------------
+# These thresholds prevent training under-supported or class-collapsed treatment models.
+min_rows_per_drug: 30
+# Minimum unique cases required for a treatment model.
+min_cases_per_drug: 30
+# Minimum responder and non-responder rows required per treatment.
+min_rows_per_class: 8
+
+
+# ------------------------------------------------------------
+# Model architecture and calibration parameters
+# ------------------------------------------------------------
+# Classical deployable model: imputation -> variance filter -> scaling -> PCA -> logistic regression.
+pca_components: 50
+# Low-variance expression features below this threshold are filtered before PCA.
+variance_threshold: 0.0
+# Logistic regression convergence limit.
+max_iter: 3000
+# Logistic regression inverse regularization strength.
+logreg_c: 1.0
+# Balanced class weights reduce bias from responder/non-responder imbalance.
+class_weight: "balanced"
+
+# Post-hoc probability calibration method fitted from out-of-fold predictions.
+calibration_method: "sigmoid"
+
+
+# ------------------------------------------------------------
+# Teacher-use quality gates
+# ------------------------------------------------------------
+# Models that fail these gates can still be trained but should not be trusted as high-confidence teachers.
+quality:
+  min_successful_folds: 3
+  min_auc_for_teacher: 0.55
+  min_brier_improvement_for_teacher: 0.0
+  max_extreme_fraction_for_teacher: 0.35
+  min_reliability_weight_for_teacher: 0.05
+
+
+# ------------------------------------------------------------
+# Optional Visium pseudobulk teacher scoring
+# ------------------------------------------------------------
+# Step 05 uses this block to score spatial-cohort pseudobulk expression with approved models.
+teacher_scoring:
+# When true, only models approved by the audit are scored for teacher_builder handoff.
+  approved_only: true
+# When true, calibrated probabilities are reliability-shrunk toward the treatment response prior.
+  shrink_to_prior: true
+# Lower probability clip to avoid exact-zero teacher labels.
+  clip_low: 0.02
+# Upper probability clip to avoid exact-one teacher labels.
+  clip_high: 0.98
+# Pseudobulk expression table for Visium samples, usually produced by teacher_builder expression setup.
+  visium_pseudobulk_table: "prediction_modeling_pipeline/teacher_builder/outputs/output_run_102_reactome75_20260503/02_expression_teacher/visium_pseudobulk_expression.tsv"
+# Column containing Visium sample or slide identifiers.
+  visium_sample_col: "slide_id"
+# Expression teacher score tables are written here.
+  output_dir: "prediction_modeling_pipeline/model_training/expression_response_model_v2/outputs/visium_teacher_scores_CH1"

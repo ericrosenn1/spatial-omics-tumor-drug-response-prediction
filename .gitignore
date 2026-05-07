@@ -1,0 +1,239 @@
+# ============================================================
+# Environments
+# ============================================================
+.venv/
+venv/
+env/
+ENV/
+**/.venv/
+**/venv/
+**/env/
+**/ENV/
+
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# ============================================================
+# Local, private, temporary, deprecated, archive, backup
+# ============================================================
+local/
+local_*/
+local-*/
+local_archive/
+**/local/
+**/local_*/
+**/local-*/
+**/local_archive/
+
+private/
+_private*/
+**/private/
+**/_private*/
+
+archive/
+archives/
+archive_*/
+archives_*/
+local_archive/
+_repo_local_archive/
+**/archive/
+**/archives/
+**/archive_*/
+**/archives_*/
+**/local_archive/
+**/_repo_local_archive/
+
+backup/
+backups/
+backup_*/
+backups_*/
+**/backup/
+**/backups/
+**/backup_*/
+**/backups_*/
+
+deprecated/
+_deprecated*/
+old_deprecated*/
+old_runs/
+test_outputs/
+**/deprecated/
+**/_deprecated*/
+**/old_deprecated*/
+**/old_runs/
+**/test_outputs/
+
+temp/
+tmp/
+_temp*/
+**/temp/
+**/tmp/
+**/_temp*/
+
+# ============================================================
+# Generated outputs and logs
+# ============================================================
+outputs/
+**/outputs/
+logs/
+log/
+_run_logs/
+_reorg_logs/
+**/logs/
+**/log/
+**/_run_logs/
+**/_reorg_logs/
+
+# ============================================================
+# Large data directories
+# ============================================================
+Visium_samples/
+WSI_data/
+raw_data/
+data/raw/
+data/processed/
+processed_samples/
+raw_visium_new/
+visium_cohort_clean/
+**/Visium_samples/
+**/WSI_data/
+**/raw_data/
+**/data/raw/
+**/data/processed/
+**/processed_samples/
+**/raw_visium_new/
+**/visium_cohort_clean/
+
+# ============================================================
+# Spatial omics and model data files
+# ============================================================
+*.h5ad
+*.h5
+*.hdf5
+*.loom
+*.mtx
+*.npz
+*.npy
+*.pkl
+*.pickle
+*.joblib
+*.parquet
+*.feather
+*.rds
+*.RData
+*.bam
+*.bai
+*.sam
+*.fastq
+*.fq
+*.fastq.gz
+*.fq.gz
+*.vcf
+*.vcf.gz
+
+# ============================================================
+# Generated tables and spreadsheets
+# ============================================================
+*.csv
+*.tsv
+*.tab
+*.xlsx
+*.xls
+
+# allow example or template tables only
+!**/examples/**/*.csv
+!**/examples/**/*.tsv
+!**/example*.csv
+!**/example*.tsv
+!**/template*.csv
+!**/template*.tsv
+!**/manifest_example*.csv
+!**/sample_manifest*.csv
+
+# ============================================================
+# Generated figures, documents, archives
+# ============================================================
+*.png
+*.jpg
+*.jpeg
+*.tif
+*.tiff
+*.svg
+*.pdf
+*.pptx
+*.docx
+*.zip
+*.tar
+*.tar.gz
+*.gz
+*.7z
+*.rar
+
+# allow documentation images only if placed intentionally
+!docs/**/*.png
+!docs/**/*.jpg
+!docs/**/*.jpeg
+!**/docs/**/*.png
+!**/docs/**/*.jpg
+!**/docs/**/*.jpeg
+
+# ============================================================
+# ChatGPT, transcript, bundle, and scratch artifacts
+# ============================================================
+Pasted text*.txt
+Pasted*.txt
+_LIVE_*.txt
+*_LIVE_*.txt
+*combined*.txt
+*all_code+data_combined*
+*all_images_combined*
+*filetree*.txt
+project_filetree_*.txt
+spatial_feature_identification_pipeline_filetree_*.txt
+
+# ============================================================
+# OS and editor
+# ============================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Extra GitHub source-only protection
+cleanup_backup*/
+**/cleanup_backup*/
+*_backup*/
+**/*_backup*/
+_backup*/
+**/_backup*/
+
+data_manifests/
+**/data_manifests/
+manuscript_source_files/
+**/manuscript_source_files/
+
+*_metrics.json
+*_report.txt
+*_summary.txt
+*_classification_report*.txt
+*diagnostic*.txt
+*diagnostic*.json
+*dryrun*.txt
+*dry_run*.txt
+*cleanup*.txt
+*cleanup*.json
+
+# keep only intentional example manifests, not generated data manifests
+!**/examples/**
+!**/templates/**
+!**/configs/**

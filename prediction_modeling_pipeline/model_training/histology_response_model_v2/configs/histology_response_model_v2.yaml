@@ -1,0 +1,154 @@
+# =============================================================================
+# histology_response_model_v2 configuration documentation
+# =============================================================================
+# This YAML controls the GDC/CPTAC histology response teacher workflow.
+# Comments may be edited freely, but scalar values, paths, thresholds,
+# model settings, and output names should remain unchanged unless the
+# pipeline is intentionally reconfigured and rerun.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# Project roots and output locations
+# -----------------------------------------------------------------------------
+project_root: D:/Adv_Omics_Fenyo/project
+run_name: histology_v2
+output_root: D:/Adv_Omics_Fenyo/project/prediction_modeling_pipeline/model_training/histology_response_model_v2/outputs/histology_v2
+
+# -----------------------------------------------------------------------------
+# Histology input paths and local storage
+# -----------------------------------------------------------------------------
+paths:
+  cptac_data_dir: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data
+  tcia_download_dir: C:/WSI_data/tcia_downloads
+  tile_dir: D:\Adv_Omics_Fenyo\gdc_named_treatment_tiles
+  old_tile_manifest: C:/WSI_data/tcia_tiles/tile_manifest.csv
+  old_tile_training_table: C:/WSI_data/tcia_tiles/tile_training_table_drug_response.csv
+  old_patient_split_table: C:/WSI_data/tcia_tiles/patient_split_table_drug_response.csv
+
+# -----------------------------------------------------------------------------
+# Clinical table file names
+# -----------------------------------------------------------------------------
+clinical_files:
+  clinical: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data\clinical.tsv
+  follow_up: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data\follow_up.tsv
+  pathology: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data\pathology_detail.tsv
+  exposure: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data\exposure.tsv
+input_case_ids:
+  minimal_case_ids: minimal_case_outputs/case_ids_minimal_spec.txt
+  allow_all_clinical_cases_if_missing: true
+
+# -----------------------------------------------------------------------------
+# Response labeling rules
+# -----------------------------------------------------------------------------
+labeling:
+  strict_specific_treatment_only: true
+  response_priority:
+  - treatments.treatment_outcome
+  - follow_ups.disease_response
+  - diagnoses.best_overall_response
+  responder_labels:
+  - CR
+  - PR
+  - NED
+  - complete response
+  - partial response
+  - no evidence of disease
+  non_responder_labels:
+  - SD
+  - PD
+  - WITH_TUMOR
+  - stable disease
+  - progressive disease
+  - persistent disease
+  - with tumor
+  require_named_agent_or_regimen: true
+  min_cases_per_treatment_for_training: 8
+  min_cases_per_class_per_treatment_for_teacher: 3
+
+# -----------------------------------------------------------------------------
+# Slide manifest and SVS discovery
+# -----------------------------------------------------------------------------
+slide_manifest:
+  svs_extensions:
+  - .svs
+  - .tif
+  - .tiff
+  require_slide_for_training: true
+
+# -----------------------------------------------------------------------------
+# Tiling parameters
+# -----------------------------------------------------------------------------
+Tiling:
+  tile_size: 256
+  level: 0
+  stride: 256
+  white_threshold: 220
+  min_tissue_fraction: 0.3
+  max_tiles_per_slide: 500
+  image_format: jpg
+  jpg_quality: 95
+  skip_if_done: true
+  random_seed: 42
+
+# -----------------------------------------------------------------------------
+# Patient-level split parameters
+# -----------------------------------------------------------------------------
+split:
+  train_frac: 0.7
+  val_frac: 0.15
+  test_frac: 0.15
+  random_seed: 42
+  min_group_size_for_stratify: 3
+
+# -----------------------------------------------------------------------------
+# Neural model training parameters
+# -----------------------------------------------------------------------------
+training:
+  models_to_train:
+  - treatment_only
+  - image_only
+  - image_treatment
+  backbone_name: resnet18
+  pretrained: true
+  freeze_backbone: false
+  image_size: 224
+  batch_size: 128
+  num_workers: 8
+  max_epochs: 12
+  learning_rate: 0.0001
+  weight_decay: 0.0001
+  treatment_embedding_dim: 32
+  hidden_dim: 256
+  dropout: 0.3
+  label_smoothing: 0.0
+  use_class_weights: true
+  use_weighted_sampler: false
+  early_stopping_patience: 4
+  monitor_metric: val_patient_auc
+  monitor_mode: max
+  max_tiles_per_patient_per_epoch: 200
+  mixed_precision: true
+  max_tiles_per_patient_for_eval: 200
+controls:
+  n_images_for_same_image_all_treatments: 20
+  n_blank_noise_batches: 1
+  fail_if_treatment_only_auc_within: 0.02
+  fail_if_blank_treatment_std_gt: 0.1
+  fail_if_noise_treatment_std_gt: 0.1
+
+# -----------------------------------------------------------------------------
+# Teacher export and audit thresholds
+# -----------------------------------------------------------------------------
+teacher_export:
+  approve_if_image_treatment_beats_treatment_only_by_auc: 0.03
+  approve_if_patient_auc_at_least: 0.6
+  reliability_floor: 0.05
+  reliability_ceiling: 0.85
+
+# -----------------------------------------------------------------------------
+# Artifact quality-control parameters
+# -----------------------------------------------------------------------------
+artifact_qc:
+  enabled: true
+  workers: 16

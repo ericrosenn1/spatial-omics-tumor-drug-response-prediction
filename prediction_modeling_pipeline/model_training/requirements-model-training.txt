@@ -1,0 +1,13 @@
+# requirements-model-training.txt
+# Core packages used by expression_response_model_v2 and histology_response_model_v2.
+# Freeze exact versions later with pip freeze if archiving the runtime environment.
+
+numpy
+pandas
+pyyaml
+scikit-learn
+joblib
+pillow
+torch
+torchvision
+openslide-python
