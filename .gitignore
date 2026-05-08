@@ -284,3 +284,8 @@ project_filetree_*.txt
 # Local prediction interpretation configs
 prediction_modeling_pipeline/prediction_interpretation_model/configs/default_prediction_interpretation_model*_full_run.json
 
+# Local machine-specific config files
+**/configs/*.local.yaml
+**/configs/*local*.yaml
+**/configs/*.local.json
+**/configs/*local*.json

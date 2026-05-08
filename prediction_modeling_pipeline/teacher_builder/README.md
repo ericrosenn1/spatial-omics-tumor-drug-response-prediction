@@ -42,6 +42,7 @@ The resulting labels are intended for model development and scientific analysis.
 teacher_builder/
 ├── README.md
 ├── run_teacher_builder_governed.ps1
+├── precomputed_governed_fused_teacher_table_102samples.tsv.gz
 ├── configs/
 ├── scripts/
 └── docs/
@@ -72,8 +73,8 @@ scripts/06_qc_teacher_outputs.py
 Typical configuration files:
 
 ```text
-configs/visium_teacher_builder_governed_full102.yaml
-configs/visium_teacher_builder_governed_sample5.yaml
+configs/visium_teacher_builder_governed_full.local.yaml
+configs/visium_teacher_builder_governed_smoke_test.local.yaml
 ```
 
 Use the full configuration for the full governed run and the sample configuration for lightweight smoke testing. Before running on a new machine, update paths in the YAML config to point to local spatial features, expression teacher artifacts, histology teacher artifacts, processed Visium files, and output locations.
@@ -116,7 +117,31 @@ outputs/06_teacher_qc/qc_checks.tsv
 outputs/06_teacher_qc/teacher_qc_decision.txt
 ```
 
-These outputs are generated locally and are not committed to GitHub.
+These outputs are generated locally and are not committed to GitHub, except for the curated precomputed fused teacher handoff described below.
+
+## Precomputed fused teacher handoff
+
+For reviewer convenience, this folder includes a compressed precomputed governed fused teacher table:
+
+```text
+precomputed_governed_fused_teacher_table_102samples.tsv.gz
+```
+
+This file is a compact derived teacher-label handoff generated from the expression-response and histology-response teacher workflows. It is included so downstream Visium-facing workflows can be run without retraining the upstream expression and histology teacher models.
+
+The table contains governed sample-treatment teacher labels for the full configured cohort:
+
+```text
+Rows: 34,881 sample-treatment pairs
+Samples: 102
+Treatments: 374
+Columns: 52
+Compressed size: approximately 3 MB
+```
+
+This file is not raw expression data, raw histology data, whole-slide image data, h5ad data, or a trained model artifact. It contains the fused teacher labels used as input to downstream spatial prediction.
+
+Users who want to reproduce the full upstream workflow can regenerate this table by running `model_training/` followed by `teacher_builder`. Users who want to start from the downstream spatial prediction workflow can use this precomputed handoff.
 
 ## Quick start
 
@@ -131,7 +156,7 @@ Run the full governed workflow:
 
 ```powershell
 .\run_teacher_builder_governed.ps1 `
-  -Config .\configs\visium_teacher_builder_governed_full102.yaml `
+  -Config .\configs\visium_teacher_builder_governed_full.local.yaml `
   -StartAt 1 `
   -StopAt 6
 ```
@@ -140,7 +165,7 @@ Run a smoke test or small sample run:
 
 ```powershell
 .\run_teacher_builder_governed.ps1 `
-  -Config .\configs\visium_teacher_builder_governed_sample5.yaml `
+  -Config .\configs\visium_teacher_builder_governed_smoke_test.local.yaml `
   -StartAt 1 `
   -StopAt 6
 ```
@@ -149,7 +174,7 @@ Run one step at a time:
 
 ```powershell
 .\run_teacher_builder_governed.ps1 `
-  -Config .\configs\visium_teacher_builder_governed_full102.yaml `
+  -Config .\configs\visium_teacher_builder_governed_full.local.yaml `
   -StartAt 4 `
   -StopAt 4
 ```
@@ -185,7 +210,7 @@ From the `teacher_builder` folder, check the runner, config, and core scripts:
 
 ```powershell
 Test-Path ".\run_teacher_builder_governed.ps1"
-Test-Path ".\configs\visium_teacher_builder_governed_full102.yaml"
+Test-Path ".\configs\visium_teacher_builder_governed_full.local.yaml"
 Test-Path ".\scripts\teacher_governance_lib.py"
 Test-Path ".\scripts\01_validate_teacher_inputs.py"
 Test-Path ".\scripts\06_qc_teacher_outputs.py"
@@ -250,31 +275,31 @@ python -c "import pandas as pd; t=pd.read_csv(r'$Teacher', sep='\t'); x=pd.read_
 Rerun only input validation:
 
 ```powershell
-.\run_teacher_builder_governed.ps1 -Config .\configs\visium_teacher_builder_governed_full102.yaml -StartAt 1 -StopAt 1
+.\run_teacher_builder_governed.ps1 -Config .\configs\visium_teacher_builder_governed_full.local.yaml -StartAt 1 -StopAt 1
 ```
 
 Rerun expression teacher scoring only:
 
 ```powershell
-.\run_teacher_builder_governed.ps1 -Config .\configs\visium_teacher_builder_governed_full102.yaml -StartAt 2 -StopAt 2
+.\run_teacher_builder_governed.ps1 -Config .\configs\visium_teacher_builder_governed_full.local.yaml -StartAt 2 -StopAt 2
 ```
 
 Rerun histology teacher scoring only:
 
 ```powershell
-.\run_teacher_builder_governed.ps1 -Config .\configs\visium_teacher_builder_governed_full102.yaml -StartAt 3 -StopAt 3
+.\run_teacher_builder_governed.ps1 -Config .\configs\visium_teacher_builder_governed_full.local.yaml -StartAt 3 -StopAt 3
 ```
 
 Rerun fusion through final QC after teacher scores already exist:
 
 ```powershell
-.\run_teacher_builder_governed.ps1 -Config .\configs\visium_teacher_builder_governed_full102.yaml -StartAt 4 -StopAt 6
+.\run_teacher_builder_governed.ps1 -Config .\configs\visium_teacher_builder_governed_full.local.yaml -StartAt 4 -StopAt 6
 ```
 
 Rerun final QC only:
 
 ```powershell
-.\run_teacher_builder_governed.ps1 -Config .\configs\visium_teacher_builder_governed_full102.yaml -StartAt 6 -StopAt 6
+.\run_teacher_builder_governed.ps1 -Config .\configs\visium_teacher_builder_governed_full.local.yaml -StartAt 6 -StopAt 6
 ```
 
 ## Governance fields to preserve downstream
@@ -322,7 +347,7 @@ If the runner cannot find Python, pass it explicitly:
 ```powershell
 .\run_teacher_builder_governed.ps1 `
   -Python "<path-to-python-executable>" `
-  -Config .\configs\visium_teacher_builder_governed_full102.yaml `
+  -Config .\configs\visium_teacher_builder_governed_full.local.yaml `
   -StartAt 1 `
   -StopAt 6
 ```
@@ -345,18 +370,21 @@ Recommended to commit:
 - active config templates or small reusable configs;
 - module README and durable documentation;
 - runner scripts;
-- lightweight examples or smoke-test configs.
+- lightweight examples or smoke-test configs;
+- the curated precomputed fused teacher handoff.
 
 Recommended to keep local or archive externally:
 
-- generated `outputs/` folders;
+- generated `outputs/` folders except the curated precomputed handoff;
 - run logs;
 - local archive folders;
 - processed h5ad files;
 - raw Visium images;
+- raw expression data;
+- whole-slide images and tile outputs;
 - trained model artifacts;
 - diagnostic figures;
-- large TSV/CSV tables;
+- large TSV/CSV tables not explicitly curated for review;
 - Excel workbooks;
 - ZIP packages;
 - one-off diagnostic reports and patch backups.
@@ -368,7 +396,7 @@ The `.gitignore` in this folder is intended to help prevent accidental commits o
 Recommended review order:
 
 1. `README.md` for workflow overview and run instructions.
-2. `configs/visium_teacher_builder_governed_full102.yaml` for paths and governance controls.
+2. `configs/visium_teacher_builder_governed_full.local.yaml` for paths and governance controls.
 3. `scripts/teacher_governance_lib.py` for treatment priors, key normalization, shrinkage, and label quality.
 4. `scripts/04_fuse_teacher_tables.py` for the core governed fusion logic.
 5. `scripts/05_build_prediction_ready_teacher.py` for downstream handoff tables.
@@ -376,4 +404,5 @@ Recommended review order:
 
 ## Status
 
-The governed `teacher_builder` workflow has been documented for source-code readability and reproducible review. Generated outputs are excluded from GitHub and should be regenerated locally or archived separately.
+The governed `teacher_builder` workflow has been documented for source-code readability and reproducible review. Generated outputs are excluded from GitHub and should be regenerated locally or archived separately, with the exception of the curated compressed fused teacher handoff included for reviewer convenience.
+
