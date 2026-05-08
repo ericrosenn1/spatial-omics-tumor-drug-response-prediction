@@ -268,3 +268,8 @@ project_filetree_*.txt
 **/presentation_selected_figures/
 **/selected_project_figures_manifest.txt
 **/build_selected_project_figures_pdf.ps1
+
+# Backup files from local patching/editing
+*.bak*
+*.bak_before_*
+
