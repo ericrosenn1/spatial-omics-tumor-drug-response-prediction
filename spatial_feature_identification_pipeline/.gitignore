@@ -1,0 +1,17 @@
+﻿D:\Adv_Omics_Fenyo\project\spatial_feature_identification_pipeline\.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Local project provenance and generated data
+_repo_local_archive/
+outputs/
+
+# Editor and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

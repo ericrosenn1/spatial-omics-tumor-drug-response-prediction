@@ -1,0 +1,22 @@
+FILEPATH: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\prediction_interpretation_model\docs\SOURCE_OF_TRUTH_POLICY.txt
+
+PREDICTION INTERPRETATION MODEL SOURCE OF TRUTH POLICY
+
+Canonical source root:
+D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\spatial_prediction_model_V2\outputs\v2_full_run_20260507_115000
+
+Source truth:
+spatial_prediction_model_V2 full production run outputs.
+
+Allowed design references:
+Deprecated Prediction Interpretation Model outputs may be used only as conceptual design references.
+
+Not allowed:
+Do not use deprecated outputs as source truth.
+Do not rerun spatial_prediction_model_V2 inside this final interpretation layer.
+Do not modify spatial_prediction_model_V2 scripts from prediction_interpretation_model.
+Do not redo model selection.
+Do not make clinical treatment recommendations.
+
+First implementation checkpoint:
+Step 01 must prove that the V2 full run can be ingested cleanly and that the key V2 contract counts are intact.

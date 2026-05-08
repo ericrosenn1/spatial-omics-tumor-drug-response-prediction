@@ -1,0 +1,32 @@
+# Local provenance and archives
+local_archive/
+_installers/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Large generated outputs retained locally
+*/outputs/**/*.joblib
+*/outputs/**/*.pt
+*/outputs/**/*.pth
+*/outputs/**/*_predictions.tsv
+*/outputs/**/training_table_canonical.tsv
+*/outputs/**/tile_manifest.tsv
+*/outputs/**/tile_training_table.tsv
+*/outputs/**/tile_training_table_split.tsv
+*/outputs/**/all_tile_artifact_metrics.tsv
+*/outputs/**/all_tile_artifact_metrics_dryrun.tsv
+
+# Keep output documentation
+!*/outputs/README.md
+
+# Generated combined dumps and bundles
+*.zip
+*_all_code+data_combined_*.txt
+*_all_images_combined_*.pdf

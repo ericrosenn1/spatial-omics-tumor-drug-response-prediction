@@ -1,0 +1,23 @@
+# Generated outputs and local archives
+outputs/
+!outputs/README_outputs.md
+local_archive/
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Documentation and cleanup generated provenance
+docs/documentation_polish/
+docs/cleanup_manifests/
+
+# Local logs / temporary files
+*.log
+_LIVE_.txt
+
+# Large local model artifacts
+*.pt
+*.pth
+*.joblib
+*.pkl
+

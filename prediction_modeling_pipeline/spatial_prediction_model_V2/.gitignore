@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Environments
+.venv/
+venv/
+env/
+
+# Local project artifacts
+local/
+archive/
+deprecated/
+backup/
+temp/
+private/
+outputs/
+logs/
+ported_v1_logic/
+reference_outputs/
+documentation_polish/
+_LIVE_.txt
+
+# Local data and handoffs
+data/
+*_handoff/
+*_handoffs/
+*_derived_handoffs/
+
+# Backups
+*.before_*
+*.backup
+*.bak
+*.old
+
+# Generated heavy artifacts
+*.zip
+*.xlsx
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.tif
+*.tiff
+*.tsv
+*.csv
+*.joblib
+*.pkl
+*.pt
+*.pth
+
+# Keep source examples docs configs and tests
+!configs/*.yaml
+!configs/*.yml
+!docs/*.md
+!docs/*.txt
+!examples/*.ps1
+!examples/*.sh
+!tests/*.py

@@ -237,3 +237,34 @@ manuscript_source_files/
 !**/examples/**
 !**/templates/**
 !**/configs/**
+
+# Generated spatial feature transfer outputs
+spatial_feature_identification_pipeline/outputs_single_sample/
+spatial_feature_identification_pipeline/outputs_transfer/
+spatial_feature_identification_pipeline/outputs/
+
+# Generated provenance/audit/repo-polish reports
+spatial_feature_identification_pipeline/docs/provenance/
+prediction_modeling_pipeline/model_training/docs/cleanup_manifests/
+prediction_modeling_pipeline/model_training/docs/diagnostics/
+prediction_modeling_pipeline/model_training/docs/micro_rerun_tests/
+prediction_modeling_pipeline/model_training/docs/readme_updates/
+prediction_modeling_pipeline/model_training/docs/smoke_tests/
+prediction_modeling_pipeline/model_training/**/docs/readme_updates/
+prediction_modeling_pipeline/model_training/**/docs/status_reports/
+
+# Backup and patch files
+*.bak
+*.bak_*
+*.before_*
+*.before*
+*before_*patch*
+*safe_code_tree_table_summary*
+*all_code+data_combined*
+project_filetree_*.txt
+*_LIVE_.txt
+
+# Generated presentation/helper bundles
+**/presentation_selected_figures/
+**/selected_project_figures_manifest.txt
+**/build_selected_project_figures_pdf.ps1
