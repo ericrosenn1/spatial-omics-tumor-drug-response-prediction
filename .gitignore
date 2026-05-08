@@ -299,3 +299,15 @@ prediction_modeling_pipeline/spatial_transfer_inference_model/configs/resolved_p
 
 # Local root project profile
 project_profile.local.yaml
+
+# Local review/staging files
+local_path_files_to_fix.txt
+staged_files_review.txt
+
+# Local timestamped configs and scaffold helpers
+prediction_modeling_pipeline/setup_spatial_prediction_model_scaffold.ps1
+prediction_modeling_pipeline/spatial_prediction_model/configs/*2026*.yaml
+prediction_modeling_pipeline/spatial_prediction_model/configs/*output_run*.yaml
+prediction_modeling_pipeline/spatial_prediction_model/configs/*reactome75*.yaml
+spatial_feature_identification_pipeline/configs/transfer_*.yaml
+prediction_modeling_pipeline/model_training/histology_response_model_v2/docs/stage*.txt
