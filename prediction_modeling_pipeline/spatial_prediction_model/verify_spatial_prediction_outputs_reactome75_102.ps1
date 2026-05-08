@@ -1,11 +1,15 @@
-﻿param(
-    [string]$ProjectRoot = "D:\Adv_Omics_Fenyo\project",
+param(
+    [string]$ProjectRoot = "" ,
     [string]$CurrentRunName = "output_run_102_reactome75_20260504",
     [string[]]$PastRunNames = @("output_run_102", "output_run_10")
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+if ($ProjectRoot -eq "") {
+    $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
+}
 
 $SpatialModelDir = Join-Path $ProjectRoot "prediction_modeling_pipeline\spatial_prediction_model"
 $OutputBase = Join-Path $SpatialModelDir "outputs"
@@ -723,5 +727,7 @@ Write-Host $FlagsTsv
 if ($ExitCode -ne 0) {
     throw "Verification failed. Review $StepChecksTsv"
 }
+
+
 
 

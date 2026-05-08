@@ -306,13 +306,13 @@ The full local project used Visium spatial transcriptomics data and additional e
 Typical local folders used during development included:
 
 ```text
-<path-to-project>/spatial_feature_identification_pipeline/outputs
-<path-to-project>/prediction_modeling_pipeline/teacher_builder/outputs
-<path-to-project>/prediction_modeling_pipeline/spatial_prediction_model/outputs
-<path-to-project>/prediction_modeling_pipeline/spatial_prediction_model_V2/outputs
-<path-to-project>/prediction_modeling_pipeline/prediction_interpretation_model/outputs
-<path-to-project>/prediction_modeling_pipeline/spatial_transfer_inference_model/outputs
-<path-to-project>/Visium_samples
+YOUR_PROJECT_ROOT/spatial_feature_identification_pipeline/outputs
+YOUR_PROJECT_ROOT/prediction_modeling_pipeline/teacher_builder/outputs
+YOUR_PROJECT_ROOT/prediction_modeling_pipeline/spatial_prediction_model/outputs
+YOUR_PROJECT_ROOT/prediction_modeling_pipeline/spatial_prediction_model_V2/outputs
+YOUR_PROJECT_ROOT/prediction_modeling_pipeline/prediction_interpretation_model/outputs
+YOUR_PROJECT_ROOT/prediction_modeling_pipeline/spatial_transfer_inference_model/outputs
+YOUR_PROJECT_ROOT/Visium_samples
 ```
 
 These folders are not included in the repository.
@@ -322,7 +322,7 @@ These folders are not included in the repository.
 Create and activate a Python environment from the project root.
 
 ```powershell
-cd "<path-to-project>"
+cd "YOUR_PROJECT_ROOT"
 
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -344,7 +344,7 @@ If a component does not include a standalone requirements file, install the requ
 From the spatial feature identification pipeline folder:
 
 ```powershell
-cd "<path-to-project>\spatial_feature_identification_pipeline"
+cd "YOUR_PROJECT_ROOT\spatial_feature_identification_pipeline"
 
 python run_pipeline.py --config configs\visium_cohort_clean.yaml
 ```
@@ -366,7 +366,7 @@ spatial_feature_identification_pipeline/docs/
 From the teacher builder folder:
 
 ```powershell
-cd "<path-to-project>\prediction_modeling_pipeline\teacher_builder"
+cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\teacher_builder"
 ```
 
 Use the configuration files in:
@@ -392,7 +392,7 @@ prediction_modeling_pipeline/teacher_builder/docs/RUNBOOK_teacher_builder.md
 From the V2 spatial prediction model folder:
 
 ```powershell
-cd "<path-to-project>\prediction_modeling_pipeline\spatial_prediction_model_V2"
+cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_prediction_model_V2"
 ```
 
 Run the V2 entry point with a config file:
@@ -414,7 +414,7 @@ The smoke test should be run before a full cohort run. A smoke test is a lightwe
 From the prediction interpretation model folder:
 
 ```powershell
-cd "<path-to-project>\prediction_modeling_pipeline\prediction_interpretation_model"
+cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\prediction_interpretation_model"
 ```
 
 Run the interpretation model entry point with a completed spatial prediction model V2 run:
@@ -431,7 +431,7 @@ This produces signed spatial effects, treatment interpretation cards, sample-lev
 From the spatial transfer inference model folder:
 
 ```powershell
-cd "<path-to-project>\prediction_modeling_pipeline\spatial_transfer_inference_model"
+cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_transfer_inference_model"
 ```
 
 Run the transfer entry point with a completed prediction interpretation model run and a transfer-ready feature table:
@@ -503,4 +503,5 @@ Repository owner:
 ```text
 ericrosenn1
 ```
+
 

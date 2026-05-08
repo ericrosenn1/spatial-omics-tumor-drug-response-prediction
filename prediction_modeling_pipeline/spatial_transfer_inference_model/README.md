@@ -138,7 +138,7 @@ The module also requires a completed prediction interpretation model output fold
 Run all transfer steps from a PowerShell session after updating paths for your local machine:
 
 ```powershell
-$TransferRoot = "<path-to-project>\prediction_modeling_pipeline\spatial_transfer_inference_model"
+$TransferRoot = "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_transfer_inference_model"
 $PimRunRoot = "<path-to-completed-prediction-interpretation-model-run>"
 $FeatureTable = "<path-to-transfer-ready-model_input_numeric.csv>"
 $Python = "<path-to-python-executable>"
@@ -314,7 +314,7 @@ Then inspect feature and theme contribution tables for biological interpretation
 A smoke run can be used to confirm that the pipeline executes and writes the expected output structure. Update the paths before running.
 
 ```powershell
-$TransferRoot = "<path-to-project>\prediction_modeling_pipeline\spatial_transfer_inference_model"
+$TransferRoot = "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_transfer_inference_model"
 $PimRunRoot = "<path-to-completed-prediction-interpretation-model-run>"
 $Python = "<path-to-python-executable>"
 
@@ -370,3 +370,4 @@ Generated outputs should be regenerated from scripts or stored separately from t
 This module has been tested on smoke-test transfer input, one real Visium sample, and a four-sample Visium batch. The multi-sample run preserved all sample rows and produced the expected sample-by-treatment output table.
 
 These test outputs are local artifacts and are not included in GitHub.
+

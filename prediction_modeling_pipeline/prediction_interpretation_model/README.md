@@ -167,10 +167,10 @@ The repository should not track configs that contain private local paths, timest
 Run the full interpretation workflow through the orchestrator.
 
 ```powershell
-cd "<path-to-project>/prediction_modeling_pipeline/prediction_interpretation_model"
+cd "YOUR_PROJECT_ROOT/prediction_modeling_pipeline/prediction_interpretation_model"
 
 python .\scripts\00_run_prediction_interpretation_model.py `
-    --project-root "<path-to-project>" `
+    --project-root "YOUR_PROJECT_ROOT" `
     --model-root "." `
     --v2-run-root "<path-to-completed-spatial-prediction-model-V2-run>" `
     --run-name "prediction_interpretation_model_full_local" `
@@ -189,7 +189,7 @@ For example, after Step 01 and Step 02 have already passed, Steps 03 through 05 
 
 ```powershell
 python .\scripts\00_run_prediction_interpretation_model.py `
-    --project-root "<path-to-project>" `
+    --project-root "YOUR_PROJECT_ROOT" `
     --model-root "." `
     --v2-run-root "<path-to-completed-spatial-prediction-model-V2-run>" `
     --run-name "prediction_interpretation_model_full_local" `
@@ -343,3 +343,4 @@ Generated outputs should be regenerated from the scripts or stored separately fr
 This module summarizes associations between spatial features and treatment-response residuals. Signed effects are based on feature-target correlations weighted by model evidence. These associations do not establish causality.
 
 Treatment cards, mechanism atlases, and sample-level scores should be interpreted as biological hypotheses and reporting summaries. They are not clinical treatment recommendations.
+

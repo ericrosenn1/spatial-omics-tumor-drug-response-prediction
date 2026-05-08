@@ -1,13 +1,17 @@
 param(
-    [string]$Root = "D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\model_training",
+    [string]$Root = "" ,
     [string]$Python = ""
 )
 
 $ErrorActionPreference = "Stop"
 
+if ($Root -eq "") {
+    $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+}
+
 if ($Python -eq "") {
-    $Candidate = "D:\Adv_Omics_Fenyo\project\.venv\Scripts\python.exe"
-    if (Test-Path $Candidate) { $Python = $Candidate } else { $Python = "python" }
+    $Candidate = "python"
+    if ($Candidate -ne "" -and (Test-Path $Candidate)) { $Python = $Candidate } else { $Python = "python" }
 }
 
 $PyFiles = @(
@@ -59,3 +63,6 @@ Get-ChildItem -LiteralPath (Join-Path $Root "expression_response_model_v2\script
 
 Write-Host "py_compile: PASS"
 Write-Host "Smoke test: PASS"
+
+
+

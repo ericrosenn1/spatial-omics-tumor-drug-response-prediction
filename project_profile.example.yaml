@@ -3,7 +3,7 @@
 # project_profile.local.yaml is machine-specific and should not be committed.
 
 project:
-  project_root: "<path-to-project>"
+  project_root: "YOUR_PROJECT_ROOT"
   external_data_root: "<path-to-large-data-root-outside-repo>"
   python_executable: "python"
 
@@ -68,3 +68,4 @@ qc_policy:
   treatment_count_mode: "auto"
   fail_on_missing_required_handoffs: true
   warn_on_count_mismatch: true
+

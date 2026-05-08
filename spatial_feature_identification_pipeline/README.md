@@ -77,7 +77,7 @@ These files provide the compact numeric feature matrix and feature manifest used
 Create and activate a Python environment from the project root or from this pipeline folder.
 
 ```powershell
-cd "<path-to-project>/spatial_feature_identification_pipeline"
+cd "YOUR_PROJECT_ROOT/spatial_feature_identification_pipeline"
 
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -107,9 +107,9 @@ Before running on a new machine, update local paths in the configuration file to
 Typical local data locations are expected to be outside GitHub, for example:
 
 ```text
-<path-to-project>/Visium_samples/visium_cohort_clean
-<path-to-project>/Visium_samples/processed_samples
-<path-to-project>/spatial_feature_identification_pipeline/outputs
+YOUR_PROJECT_ROOT/Visium_samples/visium_cohort_clean
+YOUR_PROJECT_ROOT/Visium_samples/processed_samples
+YOUR_PROJECT_ROOT/spatial_feature_identification_pipeline/outputs
 ```
 
 ## Quick check
@@ -117,7 +117,7 @@ Typical local data locations are expected to be outside GitHub, for example:
 From the pipeline folder, confirm that the runner and configuration are visible:
 
 ```powershell
-cd "<path-to-project>/spatial_feature_identification_pipeline"
+cd "YOUR_PROJECT_ROOT/spatial_feature_identification_pipeline"
 
 python .\run_pipeline.py --config .\configs\visium_cohort_clean.yaml --dry-run
 ```
@@ -146,7 +146,7 @@ Expected step sequence:
 From the pipeline folder:
 
 ```powershell
-cd "<path-to-project>/spatial_feature_identification_pipeline"
+cd "YOUR_PROJECT_ROOT/spatial_feature_identification_pipeline"
 
 python .\run_pipeline.py --config .\configs\visium_cohort_clean.yaml
 ```
@@ -166,7 +166,7 @@ Audit reports are generated locally and should not be committed unless intention
 Individual scripts can be run directly for debugging, partial regeneration, or controlled reruns.
 
 ```powershell
-cd "<path-to-project>/spatial_feature_identification_pipeline"
+cd "YOUR_PROJECT_ROOT/spatial_feature_identification_pipeline"
 ```
 
 Step 01 validates the input cohort:
@@ -464,8 +464,9 @@ Get-ChildItem ".\code", ".\tools" -Recurse -Directory -Force |
 Start with:
 
 ```powershell
-cd "<path-to-project>/spatial_feature_identification_pipeline"
+cd "YOUR_PROJECT_ROOT/spatial_feature_identification_pipeline"
 python .\run_pipeline.py --config .\configs\visium_cohort_clean.yaml --dry-run
 ```
 
 Then inspect the numbered scripts in `code/` and the configuration file in `configs/`. Generated outputs are not included in the repository and should be regenerated locally when needed.
+

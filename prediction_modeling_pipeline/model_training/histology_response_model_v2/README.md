@@ -66,7 +66,7 @@ Development backups, temporary dry-run helpers, local provenance reports, model 
 From a new PowerShell session:
 
 ```powershell
-cd "<path-to-project>\prediction_modeling_pipeline\model_training\histology_response_model_v2"
+cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\model_training\histology_response_model_v2"
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 .\run_histology_response_model_v2.ps1 -StartAt 0 -StopAt 9
@@ -377,3 +377,4 @@ Large local outputs should not be committed unless a deliberate external-storage
 This module was reviewed with non-behavioral documentation edits. Smoke tests and scratch reruns are intended to verify file contracts and runtime plumbing without changing canonical outputs.
 
 A scientifically meaningful full rerun should use the full configured data and should be performed intentionally. The resulting model outputs are research artifacts for teacher construction and interpretation, not clinical recommendations.
+

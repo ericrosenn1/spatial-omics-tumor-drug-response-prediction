@@ -127,7 +127,7 @@ def main():
     args = parser.parse_args()
 
     cfg = load_config(args.config)
-    project_dir = Path(cfg.get("project_dir", r"D:\Adv_Omics_Fenyo\project"))
+    project_dir = Path(cfg.get("project_dir", ".")).resolve()
 
     output_root = Path(cfg["output_root"])
     out_dir = output_root / "03_slide_manifest"
@@ -137,7 +137,7 @@ def main():
         find_key_recursive(cfg, "cptac_dir")
         or find_key_recursive(cfg, "cptac_data_dir")
         or find_key_recursive(cfg, "clinical_dir")
-        or r"D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data"
+        or str(project_dir / "prediction_modeling_pipeline" / "data_manifests" / "cptac_histology_training_data")
     )
     cptac_dir = resolve_path(project_dir, cptac_dir_raw)
 
@@ -341,3 +341,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

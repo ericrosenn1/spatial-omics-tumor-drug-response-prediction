@@ -49,7 +49,7 @@ from _stim_utils import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--project-root", default=r"D:\Adv_Omics_Fenyo\project")
+    parser.add_argument("--project-root", default=None)
     parser.add_argument("--model-root", default="")
     parser.add_argument("--pim-run-root", required=True)
     parser.add_argument("--spatial-feature-run-root", default="")

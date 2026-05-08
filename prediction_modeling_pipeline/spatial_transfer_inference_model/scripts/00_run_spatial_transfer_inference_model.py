@@ -67,7 +67,7 @@ def parse_steps(value: str) -> List[str]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--project-root", default=r"D:\Adv_Omics_Fenyo\project")
+    parser.add_argument("--project-root", default=None)
     parser.add_argument("--model-root", default="")
     parser.add_argument("--pim-run-root", required=True, help="Completed prediction_interpretation_model run root.")
     parser.add_argument("--spatial-feature-run-root", default="", help="Optional spatial_feature_identification_pipeline output root.")

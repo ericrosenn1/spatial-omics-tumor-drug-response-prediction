@@ -1,0 +1,21 @@
+D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\model_training\histology_response_model_v2\docs\stage02_scripts_00_01_02_documentation_summary_20260507_003031.txt
+
+Stage 02 documentation summary: scripts 00, 01, and 02
+========================================================================
+
+root: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\model_training\histology_response_model_v2
+backup_dir: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\model_training\histology_response_model_v2\docs\documentation_patch_backups_20260507_003031
+manifest: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\model_training\histology_response_model_v2\docs\stage02_scripts_00_01_02_documentation_manifest_20260507_003031.tsv
+
+Validation:
+  - each Python file: py_compile PASS
+  - each Python file: executable AST unchanged after ignoring docstrings
+
+Files processed:
+  - scripts/00_build_treatment_ontology.py | changed=True | module_docstring=1 | sections=2 | comments=3 | docstrings=1
+  - scripts/01_validate_inputs.py | changed=True | module_docstring=1 | sections=2 | comments=3 | docstrings=1
+  - scripts/02_build_case_label_table.py | changed=True | module_docstring=1 | sections=3 | comments=3 | docstrings=4
+
+Scope:
+  Documentation-only edits to early histology_response_model_v2 scripts.
+  No thresholds, paths, schemas, model settings, outputs, or control flow were intentionally changed.

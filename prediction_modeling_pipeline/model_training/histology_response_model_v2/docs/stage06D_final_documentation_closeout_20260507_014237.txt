@@ -1,0 +1,46 @@
+D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\model_training\histology_response_model_v2\docs\stage06D_final_documentation_closeout_20260507_014237.txt
+
+histology_response_model_v2 final documentation closeout
+========================================================================
+
+root: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\model_training\histology_response_model_v2
+timestamp: 20260507_014237
+manifest: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\model_training\histology_response_model_v2\docs\stage06D_final_documentation_manifest_20260507_014237.tsv
+
+Final validation:
+  - canonical Python files py_compile: PASS
+  - YAML parse: PASS
+  - README: expanded Markdown guide
+  - PowerShell runner: documented in Stage 06B with executable lines unchanged after comment stripping
+  - YAML config: documented in Stage 06A with parsed values unchanged
+
+Canonical files checked:
+  - configs\histology_response_model_v2.yaml | exists=True | bytes=5956
+  - run_histology_response_model_v2.ps1 | exists=True | bytes=2750
+  - README.md | exists=True | bytes=7857
+  - scripts\histology_model_v2_lib.py | exists=True | bytes=8335
+  - scripts\00_build_treatment_ontology.py | exists=True | bytes=3649
+  - scripts\01_validate_inputs.py | exists=True | bytes=3771
+  - scripts\02_build_case_label_table.py | exists=True | bytes=6773
+  - scripts\03_build_slide_manifest.py | exists=True | bytes=13266
+  - scripts\04_tile_slides.py | exists=True | bytes=11721
+  - scripts\05_build_tile_training_table.py | exists=True | bytes=11524
+  - scripts\06_build_patient_split.py | exists=True | bytes=11405
+  - scripts\07_train_baselines_and_conditioned_model.py | exists=True | bytes=29400
+  - scripts\08_run_control_inference.py | exists=True | bytes=4614
+  - scripts\09_audit_histology_model.py | exists=True | bytes=4602
+
+Stage reports present:
+  - stage01_histology_model_v2_lib_documentation_summary_20260507_002813.txt
+  - stage02_scripts_00_01_02_documentation_summary_20260507_003031.txt
+  - stage03_scripts_03_04_05_documentation_summary_20260507_003620.txt
+  - stage04_scripts_06_07_documentation_summary_20260507_004938.txt
+  - stage05_scripts_08_09_documentation_summary_20260507_012151.txt
+  - stage06A_yaml_documentation_summary_20260507_012947.txt
+  - stage06B_runner_documentation_summary_20260507_013331.txt
+  - stage06C_readme_documentation_summary_20260507_014103.txt
+
+Final status:
+  Documentation polish is complete for the canonical histology_response_model_v2 production files.
+  No executable-code behavior changes were intended during the documentation pass.
+  Backups for each stage are stored under docs\documentation_patch_backups_*.

@@ -48,9 +48,9 @@ Set-Location $Here
 
 # Prefer the project virtual environment; fall back to system python if needed.
 if ($Python -eq "") {
-    $ProjectRoot = "D:\Adv_Omics_Fenyo\project"
-    $Candidate = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
-    if (Test-Path $Candidate) {
+    $ProjectRoot = ""
+    $Candidate = ""
+    if ($Candidate -ne "" -and (Test-Path $Candidate)) {
         $Python = $Candidate
     } else {
         $Python = "python"
@@ -114,3 +114,5 @@ foreach ($Step in $Steps) {
 
 Write-Host ""
 Write-Host "DONE expression_response_model_v2"
+
+

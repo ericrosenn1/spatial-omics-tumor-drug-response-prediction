@@ -148,7 +148,7 @@ Users who want to reproduce the full upstream workflow can regenerate this table
 From a new PowerShell session:
 
 ```powershell
-cd "<path-to-project>\prediction_modeling_pipeline\teacher_builder"
+cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\teacher_builder"
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
@@ -405,4 +405,5 @@ Recommended review order:
 ## Status
 
 The governed `teacher_builder` workflow has been documented for source-code readability and reproducible review. Generated outputs are excluded from GitHub and should be regenerated locally or archived separately, with the exception of the curated compressed fused teacher handoff included for reviewer convenience.
+
 

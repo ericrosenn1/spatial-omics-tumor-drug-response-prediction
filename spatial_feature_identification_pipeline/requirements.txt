@@ -1,4 +1,4 @@
-﻿D:\Adv_Omics_Fenyo\project\spatial_feature_identification_pipeline\requirements.txt
+<path-to-project>\spatial_feature_identification_pipeline\requirements.txt
 
 numpy
 pandas
@@ -17,3 +17,4 @@ pyucell
 joblib
 tqdm
 kaleido
+

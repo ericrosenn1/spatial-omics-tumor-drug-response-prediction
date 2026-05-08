@@ -1,4 +1,4 @@
-﻿# GitHub-safe example configuration.
+# GitHub-safe example configuration.
 # Copy this file to a local config and replace placeholder paths before running.
 # Local machine-specific config files are ignored by Git.
 
@@ -31,7 +31,7 @@
 # Project and training input paths
 # ------------------------------------------------------------
 # project_root anchors all relative paths used by the pipeline.
-project_root: "<path-to-project>"
+project_root: "YOUR_PROJECT_ROOT"
 
 # GDC expression-response source table used to build canonical training data.
 input_training_table: "prediction_modeling_pipeline/data_manifests/gdc_expression_training_data/treatment_filtered_outputs/training_table_CH1_tpm_unstranded.tsv"
@@ -122,4 +122,5 @@ teacher_scoring:
   visium_sample_col: "slide_id"
 # Expression teacher score tables are written here.
   output_dir: "prediction_modeling_pipeline/model_training/expression_response_model_v2/outputs/visium_teacher_scores_CH1"
+
 

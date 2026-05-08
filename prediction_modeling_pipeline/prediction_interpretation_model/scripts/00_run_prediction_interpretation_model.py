@@ -283,7 +283,7 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument(
         "--project-root",
-        default=r"D:\Adv_Omics_Fenyo\project",
+        default=None,
     )
     parser.add_argument(
         "--model-root",
@@ -449,3 +449,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

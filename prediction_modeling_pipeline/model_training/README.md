@@ -36,7 +36,7 @@ Users who need full upstream reproducibility should still run `expression_respon
 From a new PowerShell session:
 
 ```powershell
-cd "<path-to-project>\prediction_modeling_pipeline\model_training"
+cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\model_training"
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
 
@@ -244,4 +244,5 @@ Recommended reading order:
 8. available local output READMEs or audit summaries, if provided separately.
 
 This folder has been organized for GitHub readability and reproducible review. Active source remains under `scripts/`; documentation and cleanup changes are intended to be non-behavioral unless explicitly noted in a module changelog or script header.
+
 

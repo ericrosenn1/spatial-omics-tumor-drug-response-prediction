@@ -119,7 +119,7 @@ GitHub-facing configs should use relative paths or placeholders when possible. M
 Use the project-level environment or create an environment for this module. From the module folder:
 
 ```powershell
-cd "<path-to-project>\prediction_modeling_pipeline\model_training\expression_response_model_v2"
+cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\model_training\expression_response_model_v2"
 
 python -m pip install --upgrade pip
 ```
@@ -127,7 +127,7 @@ python -m pip install --upgrade pip
 The module requires common Python scientific and machine-learning libraries such as `numpy`, `pandas`, `pyyaml`, `joblib`, and `scikit-learn`. If a parent `model_training` requirements file is provided, install that from the parent folder:
 
 ```powershell
-cd "<path-to-project>\prediction_modeling_pipeline\model_training"
+cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\model_training"
 python -m pip install -r requirements-model-training.txt
 ```
 
@@ -136,7 +136,7 @@ python -m pip install -r requirements-model-training.txt
 From a PowerShell session:
 
 ```powershell
-cd "<path-to-project>\prediction_modeling_pipeline\model_training\expression_response_model_v2"
+cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\model_training\expression_response_model_v2"
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 .\run_expression_response_model_v2.ps1 -StartAt 0 -StopAt 4
@@ -457,3 +457,4 @@ If Step 05 says the Visium pseudobulk table is missing, confirm the upstream tea
 ## Review and validation notes
 
 This module is intended to be reviewed as source code plus configuration. A scientifically meaningful full rerun requires the full configured expression dataset and should be performed intentionally. Smoke tests and micro reruns are useful for checking file contracts and runtime plumbing, but they are not substitutes for full model validation.
+

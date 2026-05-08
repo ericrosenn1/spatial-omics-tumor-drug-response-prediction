@@ -123,7 +123,7 @@ scripts/12_4_repair_publication_tables_and_supporting_files.py
 A local runner is provided:
 
 ```powershell
-cd "<path-to-project>/prediction_modeling_pipeline/spatial_prediction_model"
+cd "YOUR_PROJECT_ROOT/prediction_modeling_pipeline/spatial_prediction_model"
 
 .
 un_spatial_prediction_model.ps1
@@ -165,3 +165,4 @@ prediction_modeling_pipeline/spatial_prediction_model_V2/README.md
 ```
 
 Use this folder only if you want to inspect the earlier modeling design that informed V2.
+

@@ -1,4 +1,4 @@
-﻿D:\Adv_Omics_Fenyo\project\spatial_feature_identification_pipeline\.gitignore
+<path-to-project>\spatial_feature_identification_pipeline\.gitignore
 
 # Python
 __pycache__/
@@ -15,3 +15,4 @@ outputs/
 .idea/
 .DS_Store
 Thumbs.db
+

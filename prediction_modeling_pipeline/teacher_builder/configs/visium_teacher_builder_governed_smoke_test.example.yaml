@@ -29,9 +29,9 @@
 # Project roots
 # ------------------------------------------------------------
 # project_dir anchors relative paths; pipeline_dir points to the broader prediction pipeline.
-project_dir: <path-to-project>
+project_dir: YOUR_PROJECT_ROOT
 # Root for prediction_modeling_pipeline resources.
-pipeline_dir: <path-to-project>/prediction_modeling_pipeline
+pipeline_dir: YOUR_PROJECT_ROOT/prediction_modeling_pipeline
 
 # ------------------------------------------------------------
 # Visium expression and image inputs
@@ -106,15 +106,15 @@ slides_dir: Visium_samples/visium_cohort_clean
 # Expression-response model v2 artifacts
 # ------------------------------------------------------------
 # Step 02 consumes approved deployable expression models rather than retraining expression teachers.
-expression_model_v2_root: <path-to-project>/prediction_modeling_pipeline/model_training/expression_response_model_v2
+expression_model_v2_root: YOUR_PROJECT_ROOT/prediction_modeling_pipeline/model_training/expression_response_model_v2
 # Deployable expression model output root.
-expression_model_v2_deployable_root: <path-to-project>/prediction_modeling_pipeline/model_training/expression_response_model_v2/outputs/deployable_CH1
+expression_model_v2_deployable_root: YOUR_PROJECT_ROOT/prediction_modeling_pipeline/model_training/expression_response_model_v2/outputs/deployable_CH1
 # Full expression model index from expression_response_model_v2.
-expression_model_index: <path-to-project>/prediction_modeling_pipeline/model_training/expression_response_model_v2/outputs/deployable_CH1/model_index.tsv
+expression_model_index: YOUR_PROJECT_ROOT/prediction_modeling_pipeline/model_training/expression_response_model_v2/outputs/deployable_CH1/model_index.tsv
 # Approved expression model index used for teacher scoring.
-expression_model_index_approved: <path-to-project>/prediction_modeling_pipeline/model_training/expression_response_model_v2/outputs/deployable_CH1/model_index_approved.tsv
+expression_model_index_approved: YOUR_PROJECT_ROOT/prediction_modeling_pipeline/model_training/expression_response_model_v2/outputs/deployable_CH1/model_index_approved.tsv
 # Human-readable expression audit summary for provenance.
-expression_audit_summary: <path-to-project>/prediction_modeling_pipeline/model_training/expression_response_model_v2/outputs/deployable_CH1/audit/deployable_model_audit_summary.txt
+expression_audit_summary: YOUR_PROJECT_ROOT/prediction_modeling_pipeline/model_training/expression_response_model_v2/outputs/deployable_CH1/audit/deployable_model_audit_summary.txt
 # Expression training data directory used for treatment priors and feature-space context.
 expression_training_data_dir: prediction_modeling_pipeline/data_manifests/gdc_expression_training_data
 # Expression-response training table used for treatment prior construction and gene feature-space lookup.
@@ -124,13 +124,13 @@ expression_training_table: prediction_modeling_pipeline/data_manifests/gdc_expre
 # Histology-response model v2 artifacts
 # ------------------------------------------------------------
 # Step 03 uses the audited histology model and compatibility artifacts for image teacher scoring.
-histology_model_dir: <path-to-project>/prediction_modeling_pipeline/teacher_builder/outputs/_histology_v2_compat
+histology_model_dir: YOUR_PROJECT_ROOT/prediction_modeling_pipeline/teacher_builder/outputs/_histology_v2_compat
 # Histology model audit/index table with approval and reliability metadata.
-histology_model_index: <path-to-project>/prediction_modeling_pipeline/model_training/histology_response_model_v2/outputs/histology_v2/09_audit/histology_model_index.tsv
+histology_model_index: YOUR_PROJECT_ROOT/prediction_modeling_pipeline/model_training/histology_response_model_v2/outputs/histology_v2/09_audit/histology_model_index.tsv
 # Trained image_treatment checkpoint used by the histology teacher scorer.
-histology_model_path: <path-to-project>/prediction_modeling_pipeline/model_training/histology_response_model_v2/outputs/histology_v2/07_models/image_treatment/best_model.pt
+histology_model_path: YOUR_PROJECT_ROOT/prediction_modeling_pipeline/model_training/histology_response_model_v2/outputs/histology_v2/07_models/image_treatment/best_model.pt
 # Treatment/response encoder file paired with the histology model checkpoint.
-histology_encoder_path: <path-to-project>/prediction_modeling_pipeline/model_training/histology_response_model_v2/outputs/histology_v2/07_models/encoders.json
+histology_encoder_path: YOUR_PROJECT_ROOT/prediction_modeling_pipeline/model_training/histology_response_model_v2/outputs/histology_v2/07_models/encoders.json
 # Histology training data directory retained for provenance.
 histology_training_data_dir: prediction_modeling_pipeline/data_manifests/gdc_histology_response_discovery
 
@@ -138,9 +138,9 @@ histology_training_data_dir: prediction_modeling_pipeline/data_manifests/gdc_his
 # Output root and step toggles
 # ------------------------------------------------------------
 # All governed teacher_builder outputs for this run are written under output_root.
-output_root: <path-to-project>/prediction_modeling_pipeline/teacher_builder/outputs/teacher_builder_governed_smoke_test_20260505_072436
+output_root: YOUR_PROJECT_ROOT/prediction_modeling_pipeline/teacher_builder/outputs/teacher_builder_governed_smoke_test_20260505_072436
 # Archived original governed scorer directory used by the current histology wrapper.
-original_teacher_builder_backup_dir: <path-to-project>/prediction_modeling_pipeline/teacher_builder/scripts/_backup_governed_20260505_072436
+original_teacher_builder_backup_dir: YOUR_PROJECT_ROOT/prediction_modeling_pipeline/teacher_builder/scripts/_backup_governed_20260505_072436
 # Toggle for Step 02 expression teacher scoring.
 run_expression_teacher: true
 # Toggle for Step 03 histology teacher scoring.
@@ -189,5 +189,6 @@ governance:
   use_calibrated_expression_probabilities: true
   # Histology raw probabilities are governed by prior-anchored shrinkage.
   use_histology_raw_then_shrink: true
+
 
 

@@ -110,7 +110,7 @@ def main() -> None:
     parser.add_argument("--pipeline-root", default=".")
     parser.add_argument(
         "--processed-samples-root",
-        default=r"D:\Adv_Omics_Fenyo\project\Visium_samples\processed_samples",
+        default=None,
     )
     parser.add_argument("--open", action="store_true")
     args = parser.parse_args()
@@ -234,5 +234,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
 
 

@@ -856,7 +856,7 @@ def parse_args() -> argparse.Namespace:
     # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--project-root", default=r"D:\Adv_Omics_Fenyo\project")
+    parser.add_argument("--project-root", default=None)
     parser.add_argument("--model-root", default="")
     parser.add_argument("--v2-run-root", required=True)
     parser.add_argument("--output-root", default="")
@@ -1552,3 +1552,4 @@ if __name__ == "__main__":
         print("UNHANDLED ERROR IN STEP 01")
         print("".join(traceback.format_exception(exc)))
         raise SystemExit(1)
+
