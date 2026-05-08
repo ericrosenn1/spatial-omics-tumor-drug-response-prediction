@@ -280,3 +280,7 @@ project_filetree_*.txt
 *_archive_*
 *.pyc
 .cache/
+
+# Local prediction interpretation configs
+prediction_modeling_pipeline/prediction_interpretation_model/configs/default_prediction_interpretation_model*_full_run.json
+
