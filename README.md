@@ -13,6 +13,20 @@ The repository is organized as code, configuration files, documentation, and sma
 
 ## Project overview
 
+<!-- PRECOMPUTED_TEACHER_HANDOFF_NOTE_START -->
+### Optional precomputed teacher handoff
+
+For reviewer convenience, the repository includes one curated compressed teacher-builder handoff:
+
+```text
+prediction_modeling_pipeline/teacher_builder/precomputed_governed_fused_teacher_table_102samples.tsv.gz
+```
+
+This file is a compact derived fused teacher-label table for the 102-sample analysis. It allows downstream Visium-facing workflows to start from the governed teacher labels without rerunning expression-response model training, histology-response model training, or the upstream teacher-builder fusion steps.
+
+The file is not raw expression data, raw histology data, whole-slide image data, h5ad data, or a trained model artifact. Users who want full upstream reproducibility can regenerate it by running `model_training/` followed by `teacher_builder/`; users who want to focus on downstream spatial prediction can use this precomputed handoff.
+<!-- PRECOMPUTED_TEACHER_HANDOFF_NOTE_END -->
+
 The main goal is to build a computational workflow that connects spatial tumor biology to drug response prediction. The workflow begins with spatial transcriptomics data, derives interpretable tissue-level features, links those features to teacher model outputs, evaluates whether spatial biology explains sample-treatment sensitivity or resistance, and applies the resulting interpretation atlas to new Visium samples.
 
 The project is designed around interpretability and scientific auditability rather than only maximizing prediction accuracy. The intended output is a set of pipeline components that can describe which spatial, histologic, expression, immune, stromal, metabolic, tumor-boundary, accessibility, and hotspot features may contribute to treatment response.
@@ -464,3 +478,4 @@ Repository owner:
 ```text
 ericrosenn1
 ```
+

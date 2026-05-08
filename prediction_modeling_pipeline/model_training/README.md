@@ -17,6 +17,22 @@ Deprecated earlier workflows should remain outside the GitHub-tracked source pac
 
 ## Quick start
 
+<!-- PRECOMPUTED_TEACHER_HANDOFF_NOTE_START -->
+## Reviewer shortcut: precomputed teacher handoff
+
+Running the expression-response and histology-response model-training workflows can require large external datasets and substantial runtime. For reviewer convenience, the repository includes a compact precomputed fused teacher handoff in `teacher_builder`:
+
+```text
+../teacher_builder/precomputed_governed_fused_teacher_table_102samples.tsv.gz
+```
+
+If this file is used, a reviewer does not need to provide expression-training data, histology whole-slide image data, or rerun anything in `model_training/` just to start the downstream Visium-facing spatial prediction workflow.
+
+The file is a derived governed teacher-label table generated from the expression-response and histology-response teacher workflows. It is not raw expression data, raw histology data, whole-slide image data, h5ad data, or a trained model artifact.
+
+Users who need full upstream reproducibility should still run `expression_response_model_v2/`, `histology_response_model_v2/`, and `teacher_builder/` from their own configured data.
+<!-- PRECOMPUTED_TEACHER_HANDOFF_NOTE_END -->
+
 From a new PowerShell session:
 
 ```powershell
@@ -228,3 +244,4 @@ Recommended reading order:
 8. available local output READMEs or audit summaries, if provided separately.
 
 This folder has been organized for GitHub readability and reproducible review. Active source remains under `scripts/`; documentation and cleanup changes are intended to be non-behavioral unless explicitly noted in a module changelog or script header.
+

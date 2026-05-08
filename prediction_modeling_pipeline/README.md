@@ -155,6 +155,22 @@ The earlier `spatial_prediction_model/` folder is retained for review and proven
 
 ## Expected inputs
 
+<!-- PRECOMPUTED_TEACHER_HANDOFF_NOTE_START -->
+## Optional precomputed teacher handoff
+
+The repository includes one curated compressed teacher-builder handoff for reviewer convenience:
+
+```text
+teacher_builder/precomputed_governed_fused_teacher_table_102samples.tsv.gz
+```
+
+This table contains governed fused sample-treatment teacher labels for the 102-sample analysis. It can be used to start downstream Visium-facing spatial prediction workflows without rerunning `model_training/` or the upstream teacher-builder fusion steps.
+
+This is an intentional exception to the general generated-output exclusion policy. It is a compact derived handoff table, not raw expression data, raw histology data, whole-slide image data, h5ad data, or a trained model artifact.
+
+Users who want to reproduce the full upstream workflow can regenerate this table from `model_training/` and `teacher_builder`. Users who only want to run downstream spatial prediction, interpretation, or transfer workflows can use the precomputed handoff.
+<!-- PRECOMPUTED_TEACHER_HANDOFF_NOTE_END -->
+
 The modeling pipeline expects locally generated or externally prepared inputs, including:
 
 ```text
@@ -219,3 +235,4 @@ Only source code, small configuration examples, durable documentation, and light
 This repository snapshot is source-focused. It does not include the raw expression datasets, whole-slide images, Visium raw data, generated model outputs, trained models, or transfer packages needed to reproduce every result directly after cloning.
 
 To reproduce results, provide equivalent local input data, update configuration paths, run the relevant modules in order, and regenerate outputs locally.
+
