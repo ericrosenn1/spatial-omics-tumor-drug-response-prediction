@@ -1,6 +1,10 @@
+﻿# GitHub-safe example configuration.
+# Copy this file to a local config and replace placeholder paths before running.
+# Local machine-specific config files are ignored by Git.
+
 project_name: visium_cohort_clean
-input_root: D:\Adv_Omics_Fenyo\project\Visium_samples\visium_cohort_clean
-output_root: D:\Adv_Omics_Fenyo\project\spatial_feature_identification_pipeline\outputs
+input_root: <path-to-project>\Visium_samples\visium_cohort_clean
+output_root: <path-to-project>\spatial_feature_identification_pipeline\outputs
 sample_glob: SAMPLE_*
 steps:
   validate_inputs: true
@@ -35,5 +39,6 @@ external_validation:
       C1_D10_ROI1_s1: SAMPLE_0065
       C2_D11_ROI1_s1: SAMPLE_0066
       C3_D12_ROI1_s1: SAMPLE_0067
+
 
 

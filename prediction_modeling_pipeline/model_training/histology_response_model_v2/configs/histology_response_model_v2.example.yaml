@@ -1,3 +1,7 @@
+﻿# GitHub-safe example configuration.
+# Copy this file to a local config and replace placeholder paths before running.
+# Local machine-specific config files are ignored by Git.
+
 # =============================================================================
 # histology_response_model_v2 configuration documentation
 # =============================================================================
@@ -11,15 +15,15 @@
 # -----------------------------------------------------------------------------
 # Project roots and output locations
 # -----------------------------------------------------------------------------
-project_root: D:/Adv_Omics_Fenyo/project
+project_root: <path-to-project>
 run_name: histology_v2
-output_root: D:/Adv_Omics_Fenyo/project/prediction_modeling_pipeline/model_training/histology_response_model_v2/outputs/histology_v2
+output_root: <path-to-project>/prediction_modeling_pipeline/model_training/histology_response_model_v2/outputs/histology_v2
 
 # -----------------------------------------------------------------------------
 # Histology input paths and local storage
 # -----------------------------------------------------------------------------
 paths:
-  cptac_data_dir: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data
+  cptac_data_dir: <path-to-project>\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data
   tcia_download_dir: C:/WSI_data/tcia_downloads
   tile_dir: D:\Adv_Omics_Fenyo\gdc_named_treatment_tiles
   old_tile_manifest: C:/WSI_data/tcia_tiles/tile_manifest.csv
@@ -30,10 +34,10 @@ paths:
 # Clinical table file names
 # -----------------------------------------------------------------------------
 clinical_files:
-  clinical: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data\clinical.tsv
-  follow_up: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data\follow_up.tsv
-  pathology: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data\pathology_detail.tsv
-  exposure: D:\Adv_Omics_Fenyo\project\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data\exposure.tsv
+  clinical: <path-to-project>\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data\clinical.tsv
+  follow_up: <path-to-project>\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data\follow_up.tsv
+  pathology: <path-to-project>\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data\pathology_detail.tsv
+  exposure: <path-to-project>\prediction_modeling_pipeline\data_manifests\cptac_histology_training_data\exposure.tsv
 input_case_ids:
   minimal_case_ids: minimal_case_outputs/case_ids_minimal_spec.txt
   allow_all_clinical_cases_if_missing: true
@@ -152,3 +156,4 @@ teacher_export:
 artifact_qc:
   enabled: true
   workers: 16
+

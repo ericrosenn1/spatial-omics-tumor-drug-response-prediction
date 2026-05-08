@@ -1,4 +1,8 @@
-﻿project_name: visium_5_sample_test
+﻿# GitHub-safe example configuration.
+# Copy this file to a local config and replace placeholder paths before running.
+# Local machine-specific config files are ignored by Git.
+
+project_name: visium_5_sample_test
 
 input_root: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project/spatial_feature_identification_pipeline/test_inputs/visium_5_sample_test"
 output_root: "C:/Users/Owner/OneDrive/spring 2026 NYU/Adv. Omics Fenyo/project/spatial_feature_identification_pipeline/outputs/test"
@@ -16,3 +20,4 @@ steps:
   add_metabolic_concordance: true
   build_motif_tables: true
   build_model_ready_table: true
+

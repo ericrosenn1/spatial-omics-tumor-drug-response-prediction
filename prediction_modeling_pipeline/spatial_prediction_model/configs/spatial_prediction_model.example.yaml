@@ -1,4 +1,8 @@
-﻿# =====================================================================
+﻿# GitHub-safe example configuration.
+# Copy this file to a local config and replace placeholder paths before running.
+# Local machine-specific config files are ignored by Git.
+
+# =====================================================================
 # spatial_prediction_model.yaml
 # =====================================================================
 # Purpose:
@@ -240,4 +244,5 @@ expected_outputs:
     - "07_prediction_qc/qc_summary.txt"
 min_target_unique: 2
 min_test_samples_per_treatment: 2
+
 

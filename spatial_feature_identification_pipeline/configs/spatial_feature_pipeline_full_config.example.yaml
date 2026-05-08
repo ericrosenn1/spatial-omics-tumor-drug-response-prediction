@@ -1,3 +1,7 @@
+﻿# GitHub-safe example configuration.
+# Copy this file to a local config and replace placeholder paths before running.
+# Local machine-specific config files are ignored by Git.
+
 # spatial_feature_pipeline_full_config.yaml
 # Full documented configuration for the spatial feature identification pipeline.
 # Current scripts definitely read input_root, output_root, sample_glob, and sometimes steps.
@@ -241,4 +245,5 @@ current_script_support:
   definitely_read_by_lib_config: ["input_root", "output_root", "sample_glob", "steps"]
   step_specific_yaml_support: "partial_or_documentation_only"
   note: "Most scripts currently use constants and command line arguments. This file is a full run contract. To make every setting active, scripts should be patched to read their own section."
+
 
