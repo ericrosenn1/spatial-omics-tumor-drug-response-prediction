@@ -1,0 +1,70 @@
+# GitHub-safe root project profile.
+# Copy this file to project_profile.local.yaml and edit local paths before running.
+# project_profile.local.yaml is machine-specific and should not be committed.
+
+project:
+  project_root: "<path-to-project>"
+  external_data_root: "<path-to-large-data-root-outside-repo>"
+  python_executable: "python"
+
+workflow_mode:
+  run_from_raw_training_data: false
+  use_precomputed_teacher_handoff: true
+  run_spatial_feature_identification: true
+  run_teacher_builder_prediction_handoff: true
+  run_spatial_prediction_v2: true
+  run_prediction_interpretation: true
+  run_spatial_transfer_inference: false
+
+data_roots:
+  visium_raw_root: "<path-to-visium-sample-folders>"
+  visium_processed_root: "<path-to-processed-visium-h5ad-store>"
+  gdc_expression_root: "<path-to-expression-training-data>"
+  histology_wsi_root: "<path-to-whole-slide-images>"
+
+precomputed_handoffs:
+  fused_teacher_table_gz: "prediction_modeling_pipeline/teacher_builder/precomputed_governed_fused_teacher_table_102samples.tsv.gz"
+  fused_teacher_table_rows: 34881
+  fused_teacher_table_samples: 102
+  fused_teacher_table_treatments: 374
+  note: "Using this handoff skips expression-response and histology-response model training for downstream Visium-facing workflows."
+
+module_configs:
+  spatial_feature_identification:
+    example_config: "spatial_feature_identification_pipeline/configs/visium_cohort_clean.example.yaml"
+    local_config: "spatial_feature_identification_pipeline/configs/visium_cohort_clean.local.yaml"
+
+  teacher_builder:
+    example_config: "prediction_modeling_pipeline/teacher_builder/configs/visium_teacher_builder_governed_full.example.yaml"
+    local_config: "prediction_modeling_pipeline/teacher_builder/configs/visium_teacher_builder_governed_full.local.yaml"
+    if_using_precomputed_handoff_start_at: 5
+    if_using_precomputed_handoff_stop_at: 6
+    full_rebuild_start_at: 1
+    full_rebuild_stop_at: 6
+
+  spatial_prediction_model_v2:
+    example_config: "prediction_modeling_pipeline/spatial_prediction_model_V2/configs/full_run.example.yaml"
+    local_config: "prediction_modeling_pipeline/spatial_prediction_model_V2/configs/full_run.local.yaml"
+
+  prediction_interpretation_model:
+    example_config: "prediction_modeling_pipeline/prediction_interpretation_model/configs/example_prediction_interpretation_model_full_run.json"
+    local_config: "prediction_modeling_pipeline/prediction_interpretation_model/configs/prediction_interpretation_model_full_run.local.json"
+
+  spatial_transfer_inference_model:
+    example_config: "prediction_modeling_pipeline/spatial_transfer_inference_model/configs/resolved_pim_transfer_file_map.example.json"
+    local_config: "prediction_modeling_pipeline/spatial_transfer_inference_model/configs/resolved_pim_transfer_file_map.local.json"
+
+expected_handoffs:
+  spatial_feature_table: "spatial_feature_identification_pipeline/outputs/output_10_build_model_ready_table/model_input_numeric.csv"
+  spatial_feature_manifest: "spatial_feature_identification_pipeline/outputs/output_10_build_model_ready_table/feature_manifest.csv"
+  fused_teacher_table: "prediction_modeling_pipeline/teacher_builder/outputs/04_fused_teacher/fused_teacher_table.tsv"
+  prediction_ready_training_table: "prediction_modeling_pipeline/teacher_builder/outputs/05_prediction_ready_teacher/prediction_ready_training_table.tsv"
+  teacher_feature_matrix: "prediction_modeling_pipeline/teacher_builder/outputs/05_prediction_ready_teacher/model_input_numeric.csv"
+  teacher_feature_manifest: "prediction_modeling_pipeline/teacher_builder/outputs/05_prediction_ready_teacher/feature_manifest.csv"
+
+qc_policy:
+  sample_count_mode: "auto"
+  feature_count_mode: "auto"
+  treatment_count_mode: "auto"
+  fail_on_missing_required_handoffs: true
+  warn_on_count_mismatch: true

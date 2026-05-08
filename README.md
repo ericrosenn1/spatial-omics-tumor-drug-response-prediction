@@ -13,6 +13,31 @@ The repository is organized as code, configuration files, documentation, and sma
 
 ## Project overview
 
+## Project profile and configuration
+
+This repository includes a root-level project profile template:
+
+    project_profile.example.yaml
+
+This file is a GitHub-safe starting point for configuring the multi-stage workflow. It does not replace the module-specific YAML or JSON configs. Instead, it records common project roots, external data locations, expected handoff files, module config locations, QC behavior, and whether to use the precomputed teacher-builder handoff.
+
+For a new machine, copy the example profile to a local profile and edit local paths:
+
+    Copy-Item project_profile.example.yaml project_profile.local.yaml
+    notepad project_profile.local.yaml
+
+The local profile should not be committed to GitHub. It is ignored by .gitignore and may contain machine-specific paths.
+
+The most reviewer-friendly setting is:
+
+    workflow_mode:
+      use_precomputed_teacher_handoff: true
+
+With this setting, users can use the included compressed fused teacher table and do not need to provide expression-training data, histology whole-slide image data, or rerun the upstream model_training workflows just to start the downstream Visium-facing spatial prediction workflow.
+
+Users who want full upstream reproducibility can set use_precomputed_teacher_handoff to false, configure the expression and histology training inputs, run model_training, and regenerate the teacher-builder outputs locally.
+
+
 <!-- PRECOMPUTED_TEACHER_HANDOFF_NOTE_START -->
 ### Optional precomputed teacher handoff
 

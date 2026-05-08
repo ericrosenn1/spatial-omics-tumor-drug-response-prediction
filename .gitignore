@@ -296,3 +296,6 @@ prediction_modeling_pipeline/model_training/expression_response_model_v2/configs
 prediction_modeling_pipeline/model_training/histology_response_model_v2/configs/histology_response_model_v2.yaml
 prediction_modeling_pipeline/spatial_prediction_model/configs/spatial_prediction_model.yaml
 prediction_modeling_pipeline/spatial_transfer_inference_model/configs/resolved_pim_transfer_file_map.json
+
+# Local root project profile
+project_profile.local.yaml
