@@ -273,3 +273,10 @@ project_filetree_*.txt
 *.bak*
 *.bak_before_*
 
+# Local backup and temporary script copies
+*bak_before*
+*backup*
+*_backup_*
+*_archive_*
+*.pyc
+.cache/
