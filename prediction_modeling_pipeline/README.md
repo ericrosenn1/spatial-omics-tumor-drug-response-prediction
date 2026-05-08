@@ -1,221 +1,230 @@
-# Prediction Modeling Pipeline
+# model_training
 
-This folder contains the downstream modeling, teacher-label construction, spatial response prediction, biological interpretation, and transfer-inference components of the spatial omics tumor drug response project.
+`model_training` contains the upstream model-training workflows used to build response-teacher candidates for the spatial omics tumor drug response project.
 
-The code is organized as a source-focused GitHub package. Generated outputs, trained model artifacts, large training tables, logs, local archives, and machine-specific run products are excluded from version control.
+These workflows are not the final spatial prediction model. They train and audit base expression- and histology-derived response models that can be consumed by `teacher_builder`, which then prepares governed teacher signals for downstream spatial prediction and interpretation.
 
-## Overview
+The repository is source-focused. Large training tables, trained model artifacts, generated outputs, logs, local archives, and machine-specific run products are intentionally excluded from GitHub.
 
-The prediction modeling pipeline connects spatial feature tables from the Visium feature-identification workflow to treatment-response modeling and interpretation. It includes:
+## Active modules
 
-1. Training expression- and histology-based response models
-2. Building governed teacher labels for Visium samples
-3. Training spatial response models from spatial features and teacher signals
-4. Interpreting spatial response associations biologically
-5. Applying the frozen interpretation atlas to new Visium samples
+| Module | Role | Main local handoff |
+| --- | --- | --- |
+| `expression_response_model_v2/` | Trains calibrated treatment-specific expression-response models from expression, treatment, and response-label data. | Approved expression model index and optional Visium expression-teacher scores. |
+| `histology_response_model_v2/` | Trains treatment-conditioned H&E whole-slide image response models and audits whether image features add signal beyond treatment identity. | Histology model index and audit outputs. |
 
-The project is designed for scientific interpretation and auditability. Outputs should be interpreted as model-derived spatial response-alignment evidence, not as clinical treatment recommendations.
+Deprecated earlier workflows should remain outside the GitHub-tracked source package, for example under a local archive folder.
 
-## Repository structure
+## Quick start
+
+From a new PowerShell session:
+
+```powershell
+cd "<path-to-project>\prediction_modeling_pipeline\model_training"
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+Run the repository-level smoke test without rerunning model training:
+
+```powershell
+.\tests\smoke_test_model_training.ps1
+```
+
+The smoke test checks active file presence, Python compilation, YAML parsing, and selected output readability when local outputs are available. It does not retrain models and does not rewrite canonical outputs.
+
+To run an individual module, enter that module folder and use its runner:
+
+```powershell
+cd ".\expression_response_model_v2"
+.\run_expression_response_model_v2.ps1 -StartAt 0 -StopAt 4
+
+cd "..\histology_response_model_v2"
+.\run_histology_response_model_v2.ps1 -StartAt 0 -StopAt 9
+```
+
+Read the module README before intentionally rerunning either workflow.
+
+## Reproducibility and configuration rules
+
+For routine use, change paths, thresholds, training options, tiling settings, and output locations in each module YAML file:
 
 ```text
-prediction_modeling_pipeline/
+expression_response_model_v2/configs/expression_response_model_v2.yaml
+histology_response_model_v2/configs/histology_response_model_v2.yaml
+```
+
+Do not edit files in `scripts/` unless you are intentionally changing pipeline logic. The `scripts/` folders contain the active source-code implementation and should remain named `scripts/`.
+
+Important rules:
+
+- use YAML files for routine configuration changes;
+- avoid hardcoded local paths in source scripts;
+- do not overwrite canonical local outputs unless the rerun is intentional;
+- run smoke tests or scratch rerun probes before changing active outputs;
+- keep large local outputs out of ordinary Git commits unless using Git LFS or external archival storage;
+- keep local provenance, old backups, and deprecated workflows outside the GitHub-tracked source package.
+
+## Repository layout
+
+The active `model_training` layout is:
+
+```text
+model_training/
 ├── README.md
-├── model_training/
-├── teacher_builder/
-├── spatial_prediction_model/
-├── spatial_prediction_model_V2/
-├── prediction_interpretation_model/
-└── spatial_transfer_inference_model/
+├── RUNBOOK.md
+├── requirements-model-training.txt
+├── .gitignore
+├── expression_response_model_v2/
+│   ├── README.md
+│   ├── run_expression_response_model_v2.ps1
+│   ├── configs/
+│   └── scripts/
+├── histology_response_model_v2/
+│   ├── README.md
+│   ├── run_histology_response_model_v2.ps1
+│   ├── configs/
+│   └── scripts/
+├── tests/
+└── tools/
 ```
 
-## Major components
+Generated folders such as `outputs/`, `logs/`, cache folders, and local archive folders are expected to remain local and are not part of the GitHub source package.
 
-### 1. Model training
+| Folder | Purpose | GitHub handling |
+| --- | --- | --- |
+| `expression_response_model_v2/` | Active expression-response teacher workflow. | Commit source, config templates/examples, README, runner, and small durable docs. Keep large outputs local/external. |
+| `histology_response_model_v2/` | Active histology-response teacher workflow. | Commit source, config templates/examples, README, runner, and small durable docs. Keep large outputs local/external. |
+| `tests/` | Lightweight non-rerun smoke tests. | Commit. |
+| `tools/` | Optional reusable maintenance/audit utilities. | Commit only useful reusable tools. |
 
-Path:
+## Module summaries
+
+### expression_response_model_v2
+
+This module trains deployable expression-response teacher models. It uses expression profiles, named-treatment labels, and binary response labels to train treatment-specific calibrated models.
+
+Main workflow:
 
 ```text
-model_training/
+treatment ontology
+    → input validation
+    → canonical expression-response training table
+    → deployable calibrated model training
+    → model audit
+    → optional Visium pseudobulk teacher scoring
 ```
 
-This module contains source code for expression- and histology-based response modeling.
-
-Main submodules:
+Typical local outputs include:
 
 ```text
-model_training/expression_response_model_v2/
-model_training/histology_response_model_v2/
+expression_response_model_v2/outputs/deployable_CH1/model_index.tsv
+expression_response_model_v2/outputs/deployable_CH1/model_index_approved.tsv
+expression_response_model_v2/outputs/deployable_CH1/models/*.joblib
 ```
 
-The expression model workflow supports treatment ontology construction, expression training-table construction, deployable model training, model auditing, and scoring Visium samples.
+These outputs are scientifically meaningful but are generated locally and are not included in GitHub.
 
-The histology model workflow supports case label construction, slide manifest generation, tiling, tile-level training table construction, patient splitting, model training, control inference, and model auditing.
-
-Generated model files, training tables, tile outputs, prediction tables, and artifact metrics are local outputs and are not tracked in GitHub.
-
-### 2. Teacher builder
-
-Path:
+Read the module guide:
 
 ```text
-teacher_builder/
+expression_response_model_v2/README.md
 ```
 
-The teacher builder combines expression and histology response information into governed, prediction-ready teacher tables for spatial modeling.
+### histology_response_model_v2
 
-It supports input validation, expression teacher construction, histology teacher construction, teacher fusion, final teacher-table construction, and QC.
+This module trains and audits treatment-conditioned H&E whole-slide image response models. It compares `treatment_only`, `image_only`, and `image_treatment` model families to assess whether image morphology adds signal beyond treatment identity.
 
-The main local handoff products include fused teacher tables and prediction-ready training tables. These are generated locally and excluded from GitHub.
-
-### 3. Spatial prediction model
-
-Path:
+Main workflow:
 
 ```text
-spatial_prediction_model/
+treatment ontology
+    → input validation
+    → case-level treatment-response labels
+    → slide manifest
+    → tiling
+    → artifact-filtered training table
+    → patient split
+    → model training
+    → blank/noise controls
+    → audit and teacher handoff
 ```
 
-This folder contains the earlier spatial prediction workflow retained for review, provenance, and comparison with the governed V2 implementation.
-
-It includes scripts for validating inputs, building spatial modeling datasets, training spatial response models, generating sample-treatment predictions, residual modeling, label-shuffle validation, interpretation packaging, and publication-support table generation.
-
-### 4. Spatial prediction model V2
-
-Path:
+Typical local output:
 
 ```text
-spatial_prediction_model_V2/
+histology_response_model_v2/outputs/histology_v2/09_audit/histology_model_index.tsv
 ```
 
-This is the current governed spatial prediction model implementation.
+This output is generated locally and is not included in GitHub.
 
-Major functions include:
-
-1. Input validation
-2. Modeling dataset construction
-3. Probability baseline modeling
-4. Pair-level residual modeling
-5. Residual biology registry construction
-6. Broad residual model training
-7. Filtered per-treatment residual models
-8. Tiered residual model curation
-9. Label-shuffle validation
-10. Integrated interpretation package generation
-11. Publication table generation
-12. Output QC
-
-This model uses spatial feature tables and teacher outputs to model treatment response residuals and identify recurrent spatial biology themes associated with predicted sensitivity or resistance.
-
-### 5. Prediction interpretation model
-
-Path:
+Read the module guide:
 
 ```text
-prediction_interpretation_model/
+histology_response_model_v2/README.md
 ```
 
-This module converts spatial prediction model outputs into structured biological interpretation products.
+## Validation status
 
-It prepares interpretation inputs, builds feature and treatment dictionaries, computes signed spatial effects, creates treatment interpretation cards, creates sample-level interpretations, builds a mechanism atlas, and packages final outputs.
+After documentation and folder cleanup, the repository-level non-rerun smoke test was used to check active scripts, configs, runners, and selected readable outputs. Scratch micro-reruns were also used during development to test plumbing without overwriting canonical outputs.
 
-This module consumes completed `spatial_prediction_model_V2` outputs as its source data. It should not rerun V2, redo model selection, or use deprecated prediction-interpretation outputs as source truth.
+Use this command for lightweight review:
 
-### 6. Spatial transfer inference model
-
-Path:
-
-```text
-spatial_transfer_inference_model/
+```powershell
+.\tests\smoke_test_model_training.ps1
 ```
 
-This module applies the completed prediction interpretation atlas to one or more new Visium samples.
+For stricter end-to-end validation, run each module intentionally with full configured data and a scratch output root. Do not use a full rerun as a casual smoke test because model training can be slow and may overwrite outputs if active YAML output paths are unchanged.
 
-It takes transfer-ready spatial feature tables, aligns each sample to the frozen strict-feature registry, and scores sample-by-treatment spatial response alignment. It supports both single-sample transfer and small multi-sample transfer batches.
+## GitHub and publication guidance
 
-Generated transfer packages, QC reports, feature contribution tables, theme contribution tables, and sample-treatment interpretation tables are local outputs and are not tracked in GitHub.
+Recommended to commit:
 
-## Conceptual workflow
+- active module scripts;
+- active config templates or small reusable configs;
+- module READMEs;
+- top-level `README.md` and `RUNBOOK.md`;
+- `requirements-model-training.txt`;
+- `.gitignore`;
+- lightweight tests;
+- concise durable documentation.
 
-```text
-Spatial feature identification pipeline
-        ↓
-model_training/
-        ↓
-teacher_builder/
-        ↓
-spatial_prediction_model_V2/
-        ↓
-prediction_interpretation_model/
-        ↓
-spatial_transfer_inference_model/
-```
+Recommended to keep local or archive externally:
 
-The earlier `spatial_prediction_model/` folder is retained for review and provenance. The current primary governed implementation is `spatial_prediction_model_V2/`.
+- local archive folders;
+- Python cache files;
+- installer bundles;
+- trained `.joblib`, `.pkl`, `.pt`, or similar model artifacts unless using Git LFS or another deliberate model-artifact policy;
+- large canonical expression training tables;
+- tile manifests, tile training tables, tile prediction tables, and artifact metric tables;
+- generated all-code/all-data bundles;
+- one-off diagnostic reports and patch backups.
 
-## Expected inputs
+The `.gitignore` in this folder is intended to help prevent accidental commits of local provenance and large generated outputs.
 
-The modeling pipeline expects locally generated or externally prepared inputs, including:
+## Relationship to teacher_builder
 
-```text
-Spatial feature tables from spatial_feature_identification_pipeline
-Expression response model outputs
-Histology response model outputs
-Teacher builder outputs
-Spatial prediction model V2 outputs
-Prediction interpretation model outputs
-Transfer-ready Visium feature tables
-```
+The model-training layer produces audited teacher candidates. It should not be collapsed into `teacher_builder` and should not be rerun implicitly inside downstream teacher fusion.
 
-Large input data, model artifacts, generated outputs, and local result folders are not included in GitHub.
+Expected handoff pattern:
 
-## Configuration
+1. train and audit expression and histology teachers in `model_training/`;
+2. preserve model indexes, approval flags, calibration fields, reliability weights, and audit summaries locally;
+3. let `teacher_builder` consume approved artifacts or scored teacher tables;
+4. keep treatment-prior governance and spatial fusion downstream.
 
-Paths should be controlled through configuration files rather than hardcoded in scripts.
-
-Before running on a new machine, update YAML or JSON config files to point to local data locations, output folders, model roots, and completed upstream run folders.
-
-GitHub-facing configs should use relative paths or placeholders when possible. Machine-specific configs with absolute local paths should be treated as local run files and should not be committed unless intentionally redacted as examples.
-
-## Running workflows
-
-Each major module contains its own README, runbook, scripts, or examples. Start with the module-specific documentation before running a workflow.
-
-Typical order for a full local run:
-
-1. Train or load expression and histology response models.
-2. Build governed teacher tables.
-3. Run spatial prediction model V2.
-4. Run prediction interpretation model.
-5. Run spatial transfer inference on new processed Visium sample(s), if needed.
-6. Review QC, validation, interpretation, and transfer reports.
-
-## Output policy
-
-Generated folders such as the following should remain local:
-
-```text
-outputs/
-logs/
-local/
-archive/
-backup/
-deprecated/
-private/
-temp/
-model artifacts
-large CSV/TSV tables
-Excel workbooks
-figures
-PDFs
-ZIP packages
-H5/H5AD files
-```
-
-Only source code, small configuration examples, durable documentation, and lightweight test or example files should be committed to GitHub.
+This separation keeps model fitting, model approval, teacher fusion, and final spatial modeling as distinct auditable stages.
 
 ## Notes for reviewers
 
-This repository snapshot is source-focused. It does not include the raw expression datasets, whole-slide images, Visium raw data, generated model outputs, trained models, or transfer packages needed to reproduce every result directly after cloning.
+Recommended reading order:
 
-To reproduce results, provide equivalent local input data, update configuration paths, run the relevant modules in order, and regenerate outputs locally.
+1. this `README.md`;
+2. `RUNBOOK.md`;
+3. `expression_response_model_v2/README.md`;
+4. `histology_response_model_v2/README.md`;
+5. each module YAML config;
+6. shared library/helper scripts;
+7. model-training and audit scripts;
+8. available local output READMEs or audit summaries, if provided separately.
+
+This folder has been organized for GitHub readability and reproducible review. Active source remains under `scripts/`; documentation and cleanup changes are intended to be non-behavioral unless explicitly noted in a module changelog or script header.
