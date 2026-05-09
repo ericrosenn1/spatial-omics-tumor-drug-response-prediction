@@ -299,6 +299,62 @@ model artifacts
 
 This keeps the GitHub repository focused on source code, configuration, documentation, and small reproducible scaffolding files.
 
+## Public-source Visium reconstruction
+
+This repository includes a GitHub-safe reconstruction layer for the Visium input data. The full local data folders are not committed, but the repository includes manifests and a downloader/reconstruction script that describe how to recreate the expected Visium file structure from public sources.
+
+Final reconstruction manifests:
+
+    data_manifest/visium_public_source_reconstruction_manifest_final.tsv
+    data_manifest/visium_expected_cohort_files_final.tsv
+    data_manifest/tls_visium_usz_sample_mapping.tsv
+    data_manifest/tls_visium_usz_zenodo_source_rule.tsv
+
+Downloader and documentation:
+
+    scripts/download_and_reconstruct_public_visium_sources.py
+    docs/PUBLIC_SOURCE_RECONSTRUCTION.md
+
+Expected local structure:
+
+    Visium_samples/
+      raw_visium_new/
+      visium_cohort_clean/
+      processed_samples/
+
+Most public source files are reconstructed from inferred GEO supplementary file URLs. The TLS_VISIUM_USZ samples are reconstructed as a Zenodo dataset-level source using DOI 10.5281/zenodo.14620362.
+
+TLS sample mapping:
+
+    SAMPLE_0095 -> KC1
+    SAMPLE_0096 -> KC2
+    SAMPLE_0097 -> KC3
+    SAMPLE_0098 -> LC1
+    SAMPLE_0099 -> LC2
+    SAMPLE_0100 -> LC3
+    SAMPLE_0101 -> LC4
+    SAMPLE_0102 -> LC5
+
+Final reconstruction status:
+
+    Final source rows: 3244
+    Final expected cohort rows: 788
+    TLS expected rows: 64
+    Direct GEO expected rows: 1
+    Remaining needs_manual_url rows: 0
+    Critical required Visium input files still unmapped: 0
+
+Dry run example:
+
+    python scripts/download_and_reconstruct_public_visium_sources.py --repo-root "YOUR_PROJECT_ROOT" --visium-root "YOUR_PROJECT_ROOT\Visium_samples" --source-manifest data_manifest/visium_public_source_reconstruction_manifest_final.tsv --expected-manifest data_manifest/visium_expected_cohort_files_final.tsv --download-raw --reconstruct-cohort --dry-run
+
+Real reconstruction example:
+
+    python scripts/download_and_reconstruct_public_visium_sources.py --repo-root "YOUR_PROJECT_ROOT" --visium-root "YOUR_PROJECT_ROOT\Visium_samples" --source-manifest data_manifest/visium_public_source_reconstruction_manifest_final.tsv --expected-manifest data_manifest/visium_expected_cohort_files_final.tsv --download-raw --reconstruct-cohort
+
+This public-source reconstruction layer supports reproducibility without adding large raw or processed data folders to Git history.
+
+
 ## Expected local data
 
 The full local project used Visium spatial transcriptomics data and additional expression and histology resources. Large inputs and outputs are expected to exist outside GitHub in the user's local project directory.
@@ -395,19 +451,33 @@ From the V2 spatial prediction model folder:
 cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_prediction_model_V2"
 ```
 
-Run the V2 entry point with a config file:
+Run the V2 entry point with a completed teacher/spatial handoff root.
+
+Smoke run example:
 
 ```powershell
-python scripts\00_run_spatial_prediction_model_v2.py --config configs\smoke_test.yaml
+python scripts\00_run_spatial_prediction_model_v2.py `
+    --mode smoke `
+    --handoff-root "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_prediction_model\outputs\_derived_handoffs\residual_prior_adjusted_filtered_20260506_223625\full102_handoff" `
+    --max-workers 0 `
+    --open-output
 ```
 
-For a full run, use:
+Full run example:
 
 ```powershell
-python scripts\00_run_spatial_prediction_model_v2.py --config configs\full_run.yaml
+python scripts\00_run_spatial_prediction_model_v2.py `
+    --mode full `
+    --handoff-root "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_prediction_model\outputs\_derived_handoffs\residual_prior_adjusted_filtered_20260506_223625\full102_handoff" `
+    --max-workers 0 `
+    --full-step09-n-shuffles 100 `
+    --full-step09-n-repeats 5 `
+    --open-output
 ```
 
 The smoke test should be run before a full cohort run. A smoke test is a lightweight end-to-end check that confirms the pipeline can execute and produce the expected output structure; it is not a full biological validation.
+
+`--max-workers 0` lets Step 09 select an automatic worker count while keeping individual XGBoost fits single-threaded inside each worker.
 
 ## Running the prediction interpretation model
 
@@ -503,5 +573,7 @@ Repository owner:
 ```text
 ericrosenn1
 ```
+
+
 
 
