@@ -1,4 +1,3 @@
-<path-to-project>\spatial_feature_identification_pipeline\requirements.txt
 
 numpy
 pandas
