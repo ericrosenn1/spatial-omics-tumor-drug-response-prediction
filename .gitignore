@@ -158,6 +158,7 @@ visium_cohort_clean/
 !**/template*.tsv
 !**/manifest_example*.csv
 !**/sample_manifest*.csv
+!data_manifest/public_visium_cohort_staging_manifest.tsv
 
 # ============================================================
 # Generated figures, documents, archives

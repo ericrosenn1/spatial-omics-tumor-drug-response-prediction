@@ -296,61 +296,40 @@ model artifacts
 
 This keeps the GitHub repository focused on source code, configuration, documentation, and small reproducible scaffolding files.
 
-## Public-source Visium reconstruction
+## Public Visium data staging
 
-This repository includes a GitHub-safe reconstruction layer for the Visium input data. The full local data folders are not committed, but the repository includes manifests and a downloader/reconstruction script that describe how to recreate the expected Visium file structure from public sources.
+This repository includes a GitHub-safe staging helper for public Visium input files. The full raw and staged data folders are not committed, but the repository includes one curated staging manifest and a root-level script that can validate public source URLs, download/cache public source files, decompress or extract source files when needed, and organize them into the stable local cohort layout used by the spatial feature identification pipeline.
 
-Final reconstruction manifests:
+Tracked staging manifest:
 
-    data_manifest/visium_public_source_reconstruction_manifest_final.tsv
-    data_manifest/visium_expected_cohort_files_final.tsv
-    data_manifest/tls_visium_usz_sample_mapping.tsv
-    data_manifest/tls_visium_usz_zenodo_source_rule.tsv
+    data_manifest/public_visium_cohort_staging_manifest.tsv
 
-Downloader and documentation:
+Root-level staging script and documentation:
 
     scripts/download_and_reconstruct_public_visium_sources.py
     docs/PUBLIC_SOURCE_RECONSTRUCTION.md
 
-Expected local structure:
+The script prepares files under a local Visium root such as:
 
     Visium_samples/
       raw_visium_new/
       visium_cohort_clean/
-      processed_samples/
+      public_visium_staging_inventory.tsv
+      public_visium_staging_summary.txt
 
-Most public source files are reconstructed from inferred GEO supplementary file URLs. The TLS_VISIUM_USZ samples are reconstructed as a Zenodo dataset-level source using DOI 10.5281/zenodo.14620362.
+The spatial feature pipeline itself lives under `spatial_feature_identification_pipeline/`. Run the staging helper first only if you need to create a local public Visium input layout, then point the spatial feature config `input_root` to `YOUR_PROJECT_ROOT\Visium_samples\visium_cohort_clean`.
 
-TLS sample mapping:
-
-    SAMPLE_0095 -> KC1
-    SAMPLE_0096 -> KC2
-    SAMPLE_0097 -> KC3
-    SAMPLE_0098 -> LC1
-    SAMPLE_0099 -> LC2
-    SAMPLE_0100 -> LC3
-    SAMPLE_0101 -> LC4
-    SAMPLE_0102 -> LC5
-
-Final reconstruction status:
-
-    Final source rows: 3244
-    Final expected cohort rows: 788
-    TLS expected rows: 64
-    Direct GEO expected rows: 1
-    Remaining needs_manual_url rows: 0
-    Critical required Visium input files still unmapped: 0
+The staged cohort preserves the project's stable internal sample IDs `SAMPLE_0000` through `SAMPLE_0102`; `SAMPLE_0049` remains part of the candidate input cohort even though it was skipped in later downstream processing. The TLS_VISIUM_USZ samples are staged from Zenodo record `14620362` / DOI `10.5281/zenodo.14620362` into `SAMPLE_0095` through `SAMPLE_0102`. Use `--skip-zenodo` to skip the large TLS archive while staging the other public files.
 
 Dry run example:
 
-    python scripts/download_and_reconstruct_public_visium_sources.py --repo-root "YOUR_PROJECT_ROOT" --visium-root "YOUR_PROJECT_ROOT\Visium_samples" --source-manifest data_manifest/visium_public_source_reconstruction_manifest_final.tsv --expected-manifest data_manifest/visium_expected_cohort_files_final.tsv --download-raw --reconstruct-cohort --dry-run
+    python scripts/download_and_reconstruct_public_visium_sources.py --repo-root "YOUR_PROJECT_ROOT" --visium-root "YOUR_PROJECT_ROOT\Visium_samples" --manifest data_manifest\public_visium_cohort_staging_manifest.tsv --download --stage --dry-run
 
-Real reconstruction example:
+Real staging example:
 
-    python scripts/download_and_reconstruct_public_visium_sources.py --repo-root "YOUR_PROJECT_ROOT" --visium-root "YOUR_PROJECT_ROOT\Visium_samples" --source-manifest data_manifest/visium_public_source_reconstruction_manifest_final.tsv --expected-manifest data_manifest/visium_expected_cohort_files_final.tsv --download-raw --reconstruct-cohort
+    python scripts/download_and_reconstruct_public_visium_sources.py --repo-root "YOUR_PROJECT_ROOT" --visium-root "YOUR_PROJECT_ROOT\Visium_samples" --manifest data_manifest\public_visium_cohort_staging_manifest.tsv --download --stage
 
-This public-source reconstruction layer supports reproducibility without adding large raw or processed data folders to Git history.
-
+This public staging layer supports reproducibility without adding large raw or staged data folders to Git history. It does not fabricate biological metadata, clinical labels, cancer types, quality scores, response labels, or sample annotations; any generated `metadata.json` files contain only factual provenance fields derived from the staging manifest.
 
 ## Expected local data
 

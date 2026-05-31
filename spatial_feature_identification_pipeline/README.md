@@ -103,6 +103,8 @@ Before running on a new machine, copy the relevant tracked `.example.yaml` file 
 Copy-Item .\configs\visium_cohort_clean.example.yaml .\configs\visium_cohort_clean.local.yaml
 ```
 
+Optional public Visium staging helper: the root-level script `scripts/download_and_reconstruct_public_visium_sources.py` can prepare public Visium files before this pipeline runs. After staging, point the local config `input_root` to `YOUR_PROJECT_ROOT\Visium_samples\visium_cohort_clean`. This helper is not required if you already have a compatible Visium input folder.
+
 Typical local data locations are expected to be outside GitHub, for example:
 
 ```text
