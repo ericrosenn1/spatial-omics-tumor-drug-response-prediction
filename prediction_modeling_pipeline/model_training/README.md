@@ -62,13 +62,12 @@ Read the module README before intentionally rerunning either workflow.
 
 ## Reproducibility and configuration rules
 
-For routine use, change paths, thresholds, training options, tiling settings, and output locations in each module YAML file:
+For routine use, copy each tracked `.example.yaml` template to a local YAML config, then change paths, thresholds, training options, tiling settings, and output locations in the local file:
 
 ```text
-expression_response_model_v2/configs/expression_response_model_v2.yaml
-histology_response_model_v2/configs/histology_response_model_v2.yaml
+expression_response_model_v2/configs/expression_response_model_v2.example.yaml -> expression_response_model_v2/configs/expression_response_model_v2.yaml
+histology_response_model_v2/configs/histology_response_model_v2.example.yaml -> histology_response_model_v2/configs/histology_response_model_v2.yaml
 ```
-
 Do not edit files in `scripts/` unless you are intentionally changing pipeline logic. The `scripts/` folders contain the active source-code implementation and should remain named `scripts/`.
 
 Important rules:

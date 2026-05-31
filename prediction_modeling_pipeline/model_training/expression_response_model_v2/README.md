@@ -82,7 +82,7 @@ Important source files:
 
 | Type | File | Purpose |
 | --- | --- | --- |
-| Config | `configs/expression_response_model_v2.yaml` | Main user-editable configuration file. |
+| Config | `configs/expression_response_model_v2.example.yaml` | Tracked template; copy to `configs/expression_response_model_v2.yaml` for local runs. |
 | Runner | `run_expression_response_model_v2.ps1` | Executes the numbered workflow steps. |
 | Shared library | `scripts/expression_model_v2_lib.py` | Shared config, treatment, response, calibration, reliability, I/O, and probability-shrinkage helpers. |
 | Step 00 | `scripts/00_build_treatment_ontology.py` | Builds treatment ontology and alias tables from raw treatment labels. |
@@ -96,12 +96,11 @@ Development backups, temporary dry-run helpers, generated outputs, and local pro
 
 ## Configuration
 
-For normal use, change paths, thresholds, model settings, teacher-scoring options, and output locations in:
+For normal use, copy the tracked template to the local runtime config and change paths, thresholds, model settings, teacher-scoring options, and output locations there:
 
-```text
-configs/expression_response_model_v2.yaml
+```powershell
+Copy-Item .\configs\expression_response_model_v2.example.yaml .\configs\expression_response_model_v2.yaml
 ```
-
 Do not edit files in `scripts/` unless intentionally changing pipeline logic. The Python scripts are the active source implementation; the YAML config is the normal user-editable control surface.
 
 Configuration rules:

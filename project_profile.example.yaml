@@ -43,7 +43,7 @@ module_configs:
     full_rebuild_stop_at: 6
 
   spatial_prediction_model_v2:
-    example_config: "prediction_modeling_pipeline/spatial_prediction_model_V2/configs/full_run.example.yaml"
+    example_config: "prediction_modeling_pipeline/spatial_prediction_model_V2/configs/full_run.yaml"
     local_config: "prediction_modeling_pipeline/spatial_prediction_model_V2/configs/full_run.local.yaml"
 
   prediction_interpretation_model:
@@ -52,7 +52,7 @@ module_configs:
 
   spatial_transfer_inference_model:
     example_config: "prediction_modeling_pipeline/spatial_transfer_inference_model/configs/resolved_pim_transfer_file_map.example.json"
-    local_config: "prediction_modeling_pipeline/spatial_transfer_inference_model/configs/resolved_pim_transfer_file_map.local.json"
+    local_config: "prediction_modeling_pipeline/spatial_transfer_inference_model/configs/resolved_pim_transfer_file_map.json"
 
 expected_handoffs:
   spatial_feature_table: "spatial_feature_identification_pipeline/outputs/output_10_build_model_ready_table/model_input_numeric.csv"

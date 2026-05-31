@@ -19,8 +19,7 @@ spatial_feature_identification_pipeline/
 ├── requirements.txt
 ├── configs/
 ├── code/
-├── tools/
-└── docs/
+└── tools/
 ```
 
 `run_pipeline.py` is the main runner for Steps 01 through 12.
@@ -31,7 +30,7 @@ spatial_feature_identification_pipeline/
 
 `tools/` contains audit, maintenance, and repository-check utilities.
 
-`docs/` contains runbooks and source-facing documentation.
+Run instructions are maintained in this README; tracked configuration templates are documented in `configs/README.md`.
 
 Generated folders such as `outputs/`, `logs/`, `_repo_local_archive/`, `_LIVE_.txt`, and local provenance/audit reports are not part of the GitHub-tracked source package.
 
@@ -90,19 +89,19 @@ If this repository is used as part of the full project, a shared project-level e
 
 ## Configuration
 
-The active cohort configuration used during development was:
+Tracked configuration templates include:
 
 ```text
-configs/visium_cohort_clean.yaml
+configs/visium_cohort_clean.example.yaml
+configs/spatial_feature_pipeline_full_config.example.yaml
+configs/visium_5_sample_test.example.yaml
 ```
 
-A full reference configuration may also be present:
+Before running on a new machine, copy the relevant tracked `.example.yaml` file to a local `.local.yaml` file and update paths there. Local YAML configs are machine-specific and should not be committed.
 
-```text
-configs/spatial_feature_pipeline_full_config.yaml
+```powershell
+Copy-Item .\configs\visium_cohort_clean.example.yaml .\configs\visium_cohort_clean.local.yaml
 ```
-
-Before running on a new machine, update local paths in the configuration file to point to the available Visium sample folder, processed-sample location, output root, and any external reference resources.
 
 Typical local data locations are expected to be outside GitHub, for example:
 
@@ -119,7 +118,7 @@ From the pipeline folder, confirm that the runner and configuration are visible:
 ```powershell
 cd "YOUR_PROJECT_ROOT/spatial_feature_identification_pipeline"
 
-python .\run_pipeline.py --config .\configs\visium_cohort_clean.yaml --dry-run
+python .\run_pipeline.py --config .\configs\visium_cohort_clean.local.yaml --dry-run
 ```
 
 The dry run prints the commands that would execute Steps 01 through 12 without regenerating outputs.
@@ -148,7 +147,7 @@ From the pipeline folder:
 ```powershell
 cd "YOUR_PROJECT_ROOT/spatial_feature_identification_pipeline"
 
-python .\run_pipeline.py --config .\configs\visium_cohort_clean.yaml
+python .\run_pipeline.py --config .\configs\visium_cohort_clean.local.yaml
 ```
 
 A full run can overwrite or regenerate output folders. Archive important local outputs before major reruns.
@@ -172,73 +171,73 @@ cd "YOUR_PROJECT_ROOT/spatial_feature_identification_pipeline"
 Step 01 validates the input cohort:
 
 ```powershell
-python .\code\01_validate_inputs.py --config .\configs\visium_cohort_clean.yaml
+python .\code\01_validate_inputs.py --config .\configs\visium_cohort_clean.local.yaml
 ```
 
 Step 02 processes individual samples:
 
 ```powershell
-python .\code\02_process_samples.py --config .\configs\visium_cohort_clean.yaml
+python .\code\02_process_samples.py --config .\configs\visium_cohort_clean.local.yaml
 ```
 
 Step 03 merges per-sample slide features:
 
 ```powershell
-python .\code\03_merge_slide_features.py --config .\configs\visium_cohort_clean.yaml
+python .\code\03_merge_slide_features.py --config .\configs\visium_cohort_clean.local.yaml
 ```
 
 Step 04 scores and labels slide-level programs:
 
 ```powershell
-python .\code\04_score_and_label_slides.py --config .\configs\visium_cohort_clean.yaml
+python .\code\04_score_and_label_slides.py --config .\configs\visium_cohort_clean.local.yaml
 ```
 
 Step 05 builds multi-axis transcriptome labels:
 
 ```powershell
-python .\code\05_build_multi_axis_transcriptome_labels.py --config .\configs\visium_cohort_clean.yaml
+python .\code\05_build_multi_axis_transcriptome_labels.py --config .\configs\visium_cohort_clean.local.yaml
 ```
 
 Step 06 builds tumor accessibility profiles:
 
 ```powershell
-python .\code\06_build_accessibility_profiles.py --config .\configs\visium_cohort_clean.yaml
+python .\code\06_build_accessibility_profiles.py --config .\configs\visium_cohort_clean.local.yaml
 ```
 
 Step 07 appends hotspot metrics:
 
 ```powershell
-python .\code\07_append_hotspot_metrics.py --config .\configs\visium_cohort_clean.yaml
+python .\code\07_append_hotspot_metrics.py --config .\configs\visium_cohort_clean.local.yaml
 ```
 
 Step 08 adds context alignment and metabolic concordance:
 
 ```powershell
-python .\code\08_add_context_alignment.py --config .\configs\visium_cohort_clean.yaml
+python .\code\08_add_context_alignment.py --config .\configs\visium_cohort_clean.local.yaml
 ```
 
 Step 09 builds spatial motif tables:
 
 ```powershell
-python .\code\09_build_motif_tables.py --config .\configs\visium_cohort_clean.yaml
+python .\code\09_build_motif_tables.py --config .\configs\visium_cohort_clean.local.yaml
 ```
 
 Step 10 builds the model-ready numeric table:
 
 ```powershell
-python .\code\10_build_model_ready_table.py --config .\configs\visium_cohort_clean.yaml
+python .\code\10_build_model_ready_table.py --config .\configs\visium_cohort_clean.local.yaml
 ```
 
 Step 11 builds overlay review outputs:
 
 ```powershell
-python .\code\11_overlay.py --config .\configs\visium_cohort_clean.yaml
+python .\code\11_overlay.py --config .\configs\visium_cohort_clean.local.yaml
 ```
 
 Step 12 builds cohort analysis and visualization outputs:
 
 ```powershell
-python .\code\12_data_analysis_and_visuals.py --config .\configs\visium_cohort_clean.yaml
+python .\code\12_data_analysis_and_visuals.py --config .\configs\visium_cohort_clean.local.yaml
 ```
 
 Step 13 scripts are external-validation scripts and are run separately after the required reference assets are available:
@@ -465,7 +464,7 @@ Start with:
 
 ```powershell
 cd "YOUR_PROJECT_ROOT/spatial_feature_identification_pipeline"
-python .\run_pipeline.py --config .\configs\visium_cohort_clean.yaml --dry-run
+python .\run_pipeline.py --config .\configs\visium_cohort_clean.local.yaml --dry-run
 ```
 
 Then inspect the numbered scripts in `code/` and the configuration file in `configs/`. Generated outputs are not included in the repository and should be regenerated locally when needed.

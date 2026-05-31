@@ -52,14 +52,17 @@ These generated files are not included in GitHub. To rerun or inspect the workfl
 
 ## Configuration
 
-The main configuration file is:
+The tracked configuration template is:
 
 ```text
-configs/spatial_prediction_model.yaml
+configs/spatial_prediction_model.example.yaml
 ```
 
-Configuration files may contain local path assumptions from earlier development. Before running on a new machine, review and update all input paths, output paths, run names, and sample-selection settings.
+Before running on a new machine, copy it to a local YAML config and update all input paths, output paths, run names, and sample-selection settings.
 
+```powershell
+Copy-Item .\configs\spatial_prediction_model.example.yaml .\configs\spatial_prediction_model.local.yaml
+```
 For GitHub use, avoid committing machine-specific or timestamped local run configs. Keep clean templates or clearly labeled example configs when possible.
 
 ## Original run modes
@@ -125,14 +128,13 @@ A local runner is provided:
 ```powershell
 cd "YOUR_PROJECT_ROOT/prediction_modeling_pipeline/spatial_prediction_model"
 
-.
-un_spatial_prediction_model.ps1
+.\run_spatial_prediction_model.ps1 -Config .\configs\spatial_prediction_model.local.yaml
 ```
 
 or, if using the Python runner directly:
 
 ```powershell
-python run_spatial_prediction_model.py --config configs/spatial_prediction_model.yaml
+python run_spatial_prediction_model.py --config configs/spatial_prediction_model.local.yaml
 ```
 
 Before running, confirm that the configured teacher-builder handoff files exist and that output paths point to a local writable folder. Generated outputs are local-only and are not tracked in GitHub.

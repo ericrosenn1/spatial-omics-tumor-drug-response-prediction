@@ -45,8 +45,7 @@ spatial_transfer_inference_model/
 ├── .gitignore
 ├── .gitattributes
 ├── configs/
-│   └── example_spatial_transfer_inference_model.json
-├── docs/
+│   └── resolved_pim_transfer_file_map.example.json
 └── scripts/
     ├── 00_run_spatial_transfer_inference_model.py
     ├── 01_prepare_transfer_inputs.py
@@ -125,8 +124,15 @@ SAMPLE_B,0.08,0.20,1.10
 
 ### Frozen interpretation atlas
 
-The module also requires a completed prediction interpretation model output folder containing the frozen interpretation atlas. Typical required resources include:
+The module also requires a completed prediction interpretation model output folder containing the frozen interpretation atlas. The tracked file `configs/resolved_pim_transfer_file_map.example.json` is a GitHub-safe template. For local runs that use the resolved PIM file map, copy it to the runtime filename expected by the helper code and edit paths there:
 
+```powershell
+Copy-Item .\configs\resolved_pim_transfer_file_map.example.json .\configs\resolved_pim_transfer_file_map.json
+```
+
+`configs/resolved_pim_transfer_file_map.json` is local and machine-specific; keep it uncommitted.
+
+Typical required resources include:
 - strict feature registry;
 - signed treatment-feature effects;
 - signed treatment-theme effects;
@@ -144,6 +150,7 @@ $FeatureTable = "<path-to-transfer-ready-model_input_numeric.csv>"
 $Python = "<path-to-python-executable>"
 
 & $Python (Join-Path $TransferRoot "scripts\00_run_spatial_transfer_inference_model.py") `
+    --project-root "YOUR_PROJECT_ROOT" `
     --model-root $TransferRoot `
     --pim-run-root $PimRunRoot `
     --run-name "spatial_transfer_inference_example" `
@@ -319,6 +326,7 @@ $PimRunRoot = "<path-to-completed-prediction-interpretation-model-run>"
 $Python = "<path-to-python-executable>"
 
 & $Python (Join-Path $TransferRoot "scripts\00_run_spatial_transfer_inference_model.py") `
+    --project-root "YOUR_PROJECT_ROOT" `
     --model-root $TransferRoot `
     --pim-run-root $PimRunRoot `
     --run-name "spatial_transfer_inference_smoke" `

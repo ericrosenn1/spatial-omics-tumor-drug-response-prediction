@@ -45,7 +45,7 @@ Important files:
 
 | Type | File | Purpose |
 | --- | --- | --- |
-| Config | `configs/histology_response_model_v2.yaml` | Main user-editable configuration file. |
+| Config | `configs/histology_response_model_v2.example.yaml` | Tracked template; copy to `configs/histology_response_model_v2.yaml` for local runs. |
 | Runner | `run_histology_response_model_v2.ps1` | Executes the numbered workflow steps. |
 | Shared library | `scripts/histology_model_v2_lib.py` | Shared configuration, path, treatment, response, I/O, and metric helpers. |
 | Step 00 | `scripts/00_build_treatment_ontology.py` | Builds named-treatment ontology outputs. |
@@ -88,12 +88,11 @@ The runner is intended to use the project Python environment when available and 
 
 ## Configuration
 
-For normal use, change paths, thresholds, tiling settings, split settings, training options, and audit thresholds in:
+For normal use, copy the tracked template to the local runtime config and change paths, thresholds, tiling settings, split settings, training options, and audit thresholds there:
 
-```text
-configs/histology_response_model_v2.yaml
+```powershell
+Copy-Item .\configs\histology_response_model_v2.example.yaml .\configs\histology_response_model_v2.yaml
 ```
-
 Do not edit files in `scripts/` for routine reruns. The Python scripts are the active source implementation; the YAML config is the normal user-editable control surface.
 
 GitHub-facing configs should use relative paths or placeholders when possible. Machine-specific configs with absolute local paths should be treated as local run files and should not be committed unless intentionally redacted as examples.

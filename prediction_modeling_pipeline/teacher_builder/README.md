@@ -44,8 +44,7 @@ teacher_builder/
 ├── run_teacher_builder_governed.ps1
 ├── precomputed_governed_fused_teacher_table_102samples.tsv.gz
 ├── configs/
-├── scripts/
-└── docs/
+└── scripts/
 ```
 
 Generated folders such as `outputs/`, `logs/`, local archives, diagnostic figures, and run-specific reports are local-only and are excluded from GitHub.
@@ -70,15 +69,14 @@ scripts/05_build_prediction_ready_teacher.py
 scripts/06_qc_teacher_outputs.py
 ```
 
-Typical configuration files:
+Tracked configuration templates are copied to local YAML configs before running:
 
 ```text
-configs/visium_teacher_builder_governed_full.local.yaml
-configs/visium_teacher_builder_governed_smoke_test.local.yaml
+configs/visium_teacher_builder_governed_full.example.yaml -> configs/visium_teacher_builder_governed_full.local.yaml
+configs/visium_teacher_builder_governed_smoke_test.example.yaml -> configs/visium_teacher_builder_governed_smoke_test.local.yaml
 ```
 
-Use the full configuration for the full governed run and the sample configuration for lightweight smoke testing. Before running on a new machine, update paths in the YAML config to point to local spatial features, expression teacher artifacts, histology teacher artifacts, processed Visium files, and output locations.
-
+Use the full configuration for the full governed run and the smoke-test configuration for lightweight checks. Before running on a new machine, update paths in the local YAML config to point to local spatial features, expression teacher artifacts, histology teacher artifacts, processed Visium files, and output locations.
 ## Pipeline steps
 
 | Step | Script | Role |

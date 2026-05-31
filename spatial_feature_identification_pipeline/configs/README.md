@@ -1,9 +1,17 @@
-﻿# Configs
+# Configs
 
-This folder contains YAML files used to run or document the spatial feature identification pipeline.
+This folder contains tracked YAML templates used to run or document the spatial feature identification pipeline.
 
-visium_cohort_clean.yaml is the active cohort configuration for the current 102 sample analysis.
-spatial_feature_pipeline_full_config.yaml is the fuller documented configuration reference.
-visium_5_sample_test.yaml is a small historical test configuration if present.
+Tracked templates:
 
-Before rerunning, confirm input_root and output_root point to the current computer.
+- visium_cohort_clean.example.yaml
+- spatial_feature_pipeline_full_config.example.yaml
+- visium_5_sample_test.example.yaml
+
+For a new machine, copy a tracked `.example.yaml` file to a local `.local.yaml` file and edit paths there:
+
+```powershell
+Copy-Item .\visium_cohort_clean.example.yaml .\visium_cohort_clean.local.yaml
+```
+
+Before rerunning, confirm `input_root`, processed-sample paths, reference resources, and `output_root` point to the current computer. Local `.local.yaml` files are machine-specific and should not be committed.

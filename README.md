@@ -74,10 +74,8 @@ The project is designed around interpretability and scientific auditability rath
 │   ├── run_pipeline.py
 │   ├── code/
 │   ├── configs/
-│   ├── docs/
 │   └── tools/
 │
-├── sort_training_dataset_intake.py
 ├── .gitignore
 └── .gitattributes
 ```
@@ -100,7 +98,7 @@ Main files:
 spatial_feature_identification_pipeline/run_pipeline.py
 spatial_feature_identification_pipeline/code/
 spatial_feature_identification_pipeline/configs/
-spatial_feature_identification_pipeline/docs/
+spatial_feature_identification_pipeline/tools/
 ```
 
 Important conceptual outputs generated locally, but not committed:
@@ -155,7 +153,7 @@ Main files:
 ```text
 prediction_modeling_pipeline/teacher_builder/scripts/
 prediction_modeling_pipeline/teacher_builder/configs/
-prediction_modeling_pipeline/teacher_builder/docs/
+prediction_modeling_pipeline/teacher_builder/README.md
 ```
 
 The teacher builder is intended to produce calibrated, audited, treatment-aware teacher outputs for the spatial prediction model.
@@ -179,7 +177,7 @@ prediction_modeling_pipeline/spatial_prediction_model/run_spatial_prediction_mod
 prediction_modeling_pipeline/spatial_prediction_model/run_spatial_prediction_model.ps1
 prediction_modeling_pipeline/spatial_prediction_model/scripts/
 prediction_modeling_pipeline/spatial_prediction_model/configs/
-prediction_modeling_pipeline/spatial_prediction_model/docs/
+prediction_modeling_pipeline/spatial_prediction_model/docs/.gitkeep
 ```
 
 ### 5. Spatial prediction model V2
@@ -253,7 +251,6 @@ Main files:
 ```text
 prediction_modeling_pipeline/spatial_transfer_inference_model/scripts/
 prediction_modeling_pipeline/spatial_transfer_inference_model/configs/
-prediction_modeling_pipeline/spatial_transfer_inference_model/docs/
 ```
 
 Main outputs generated locally include:
@@ -402,7 +399,8 @@ From the spatial feature identification pipeline folder:
 ```powershell
 cd "YOUR_PROJECT_ROOT\spatial_feature_identification_pipeline"
 
-python run_pipeline.py --config configs\visium_cohort_clean.yaml
+Copy-Item .\configs\visium_cohort_clean.example.yaml .\configs\visium_cohort_clean.local.yaml
+python run_pipeline.py --config configs\visium_cohort_clean.local.yaml
 ```
 
 Configuration files are stored in:
@@ -411,11 +409,7 @@ Configuration files are stored in:
 spatial_feature_identification_pipeline/configs/
 ```
 
-Documentation and run instructions are stored in:
-
-```text
-spatial_feature_identification_pipeline/docs/
-```
+Run instructions are in `spatial_feature_identification_pipeline/README.md`; tracked configuration templates are in `spatial_feature_identification_pipeline/configs/`.
 
 ## Running the teacher builder
 
@@ -437,11 +431,7 @@ Scripts are located in:
 prediction_modeling_pipeline/teacher_builder/scripts/
 ```
 
-See:
-
-```text
-prediction_modeling_pipeline/teacher_builder/docs/RUNBOOK_teacher_builder.md
-```
+See `prediction_modeling_pipeline/teacher_builder/README.md` and `prediction_modeling_pipeline/teacher_builder/configs/README.md` for run instructions and config-template usage.
 
 ## Running spatial prediction model V2
 
@@ -491,7 +481,13 @@ Run the interpretation model entry point with a completed spatial prediction mod
 
 ```powershell
 python scripts\00_run_prediction_interpretation_model.py `
-    --config configs\example_prediction_interpretation_model_full_run.json
+    --project-root "YOUR_PROJECT_ROOT" `
+    --model-root "." `
+    --v2-run-root "<path-to-completed-spatial-prediction-model-V2-run>" `
+    --run-name "prediction_interpretation_model_full_local" `
+    --output-root "outputs\prediction_interpretation_model_full_local" `
+    --steps all `
+    --open-output
 ```
 
 This produces signed spatial effects, treatment interpretation cards, sample-level interpretation tables, mechanism atlases, final publication tables, figures, reports, and QC packages.
@@ -504,10 +500,11 @@ From the spatial transfer inference model folder:
 cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_transfer_inference_model"
 ```
 
-Run the transfer entry point with a completed prediction interpretation model run and a transfer-ready feature table:
+Run the transfer entry point with a completed prediction interpretation model run and a transfer-ready feature table. If using the resolved PIM transfer file map, copy `configs\resolved_pim_transfer_file_map.example.json` to `configs\resolved_pim_transfer_file_map.json` and edit local paths before running:
 
 ```powershell
 python scripts\00_run_spatial_transfer_inference_model.py `
+    --project-root "YOUR_PROJECT_ROOT" `
     --model-root . `
     --pim-run-root "<path-to-completed-prediction-interpretation-model-run>" `
     --single-slide-feature-table "<path-to-transfer-ready-model_input_numeric.csv>" `
