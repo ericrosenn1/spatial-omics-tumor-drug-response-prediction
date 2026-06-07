@@ -1,0 +1,11 @@
+format: jb-book
+root: index
+chapters:
+  - file: 00_project_overview
+  - file: 01_repository_structure
+  - file: 02_pipeline_architecture
+  - file: 03_spatial_feature_pipeline_summary
+  - file: 04_teacher_builder_and_modeling_summary
+  - file: 05_prediction_interpretation_and_transfer_summary
+  - file: 06_current_report_and_outputs_summary
+  - file: 07_git_history_and_project_evolution

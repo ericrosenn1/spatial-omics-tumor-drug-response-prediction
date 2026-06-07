@@ -21,6 +21,7 @@ __pycache__/
 .ruff_cache/
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
+notebooks/_build/
 
 # ============================================================
 # Local, private, temporary, deprecated, archive, backup

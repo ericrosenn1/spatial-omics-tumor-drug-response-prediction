@@ -1,0 +1,23 @@
+title: Spatial Omics Tumor Drug Response Prediction
+author: Eric Rosen
+copyright: "2026"
+only_build_toc_files: true
+
+execute:
+  execute_notebooks: force
+  timeout: 120
+  allow_errors: false
+
+repository:
+  url: https://github.com/ericrosenn1/spatial-omics-tumor-drug-response-prediction
+  branch: main
+
+html:
+  use_repository_button: true
+  use_issues_button: false
+  use_edit_page_button: false
+
+exclude_patterns:
+  - _build
+  - Thumbs.db
+  - .DS_Store
