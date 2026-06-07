@@ -9,3 +9,11 @@ chapters:
   - file: 05_prediction_interpretation_and_transfer_summary
   - file: 06_current_report_and_outputs_summary
   - file: 07_git_history_and_project_evolution
+  - file: 08_code_index
+  - file: 09_spatial_feature_identification_code
+  - file: 10_teacher_builder_code
+  - file: 11_model_training_code
+  - file: 12_spatial_prediction_v2_code
+  - file: 13_interpretation_and_transfer_code
+  - file: 14_config_and_manifest_index
+  - file: 15_weekly_change_log
