@@ -1,16 +1,16 @@
-# Notebook Reporting Layer
+# Jupyter Book Reporting Layer
 
-This folder is a GitHub-synced reporting interface for the project. The production repository remains the source of truth; these notebooks summarize and inspect tracked files only.
+This folder is a GitHub-synced reporting interface for the project. The production repository remains the source of truth; these MyST Markdown pages summarize and inspect tracked files only.
 
-The book also serves as an independent-study code-evolution notebook: later pages expose tracked scripts, pipeline-level code organization, and recent GitHub commit evolution for mentor review.
+The book also serves as a project evolution record: later pages expose tracked scripts, pipeline-level code organization, and recent GitHub commit evolution for project review.
 
 ## What Is Included
 
-The notebooks use files tracked in GitHub, such as README files, documentation, scripts, configs, and data manifests. Ignored local data, local outputs, private paths, model artifacts, and under-construction local experimental work are not included unless they are later committed to the repository.
+The pages use files tracked in GitHub, such as README files, documentation, scripts, configs, and data manifests. Ignored local data, local outputs, private paths, model artifacts, and under-construction local experimental work are not included unless they are later committed to the repository.
 
 ## Open On GitHub
 
-Each `.ipynb` file can be opened directly from the GitHub web interface. GitHub renders notebooks for reading, although interactive execution requires a local Jupyter environment.
+Each chapter is stored as a plain MyST Markdown `.md` page. GitHub renders the text source cleanly, while GitHub Actions builds the full Jupyter Book site for richer tables, code displays, and executed repository summaries.
 
 ## Build Locally
 
@@ -48,6 +48,6 @@ If Pages is not enabled, the workflow can still build the site artifact for revi
 
 ## Boundary
 
-These notebooks are a reporting and navigation layer. They do not migrate production code into notebooks, rewrite scientific logic, or replace the command-line workflows.
+These pages are a reporting and navigation layer. They do not migrate production code into the book, rewrite scientific logic, or replace the command-line workflows.
 
-The notebooks remain executable, but routine setup and repository-inspection code cells are hidden or collapsed in the rendered Jupyter Book so the site reads like a project report. Technically interested readers can still inspect the source notebooks directly on GitHub.
+Some pages include executable MyST code cells for lightweight repository inspection. Routine setup and helper cells are hidden in the rendered Jupyter Book so the site reads like a project report. Technically interested readers can still inspect the plain Markdown source directly on GitHub.
