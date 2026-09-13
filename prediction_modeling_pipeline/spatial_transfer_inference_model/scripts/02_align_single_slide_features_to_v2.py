@@ -27,6 +27,8 @@ from typing import List
 import numpy as np
 import pandas as pd
 
+from _alignment_contract import fit_reference, transform, save_reference
+
 from _stim_utils import (
     add_qc,
     choose_col,
@@ -100,6 +102,11 @@ def main() -> int:
         if v2_sample_col != "sample_id":
             v2 = v2.rename(columns={v2_sample_col: "sample_id"})
 
+        reference = fit_reference(v2, strict_features)
+        transformed, observed = transform(reference, input_df)
+        save_reference(reference, ref_dir / "frozen_alignment_reference.json")
+        transformed_by_id = transformed.set_index("sample_id")
+
         ref_rows = []
         for feature in strict_features:
             if feature in v2.columns:
@@ -156,10 +163,7 @@ def main() -> int:
                 v2_min = float(ref.get("v2_min", 0.0) or 0.0)
                 v2_max = float(ref.get("v2_max", 0.0) or 0.0)
 
-                if is_nonmissing and np.isfinite(value) and np.isfinite(std) and std > 0:
-                    z = float((float(value) - mean) / std)
-                else:
-                    z = 0.0
+                z = float(transformed_by_id.loc[sample_id, feature])
 
                 within_minmax = bool(is_nonmissing and float(value) >= v2_min and float(value) <= v2_max) if pd.notna(value) else False
 
@@ -173,6 +177,8 @@ def main() -> int:
                     "nonmissing_in_transfer_input": is_nonmissing,
                     "raw_value": value,
                     "v2_scaled_z": z,
+                    "missing_value_policy": "observed" if is_nonmissing else "neutral_training_mean_z0_not_biological_absence",
+
                     "v2_mean": mean,
                     "v2_std": std,
                     "v2_min": v2_min,
@@ -208,11 +214,11 @@ def main() -> int:
         min_coverage = float(coverage["nonmissing_fraction"].min()) if not coverage.empty else 0.0
         min_present = float(coverage["present_fraction"].min()) if not coverage.empty else 0.0
 
-        add_qc(qc, "strict_feature_count", "pass" if len(strict_features) == 139 else "warn", len(strict_features), 139, "Strict V2 biology features used for transfer alignment.")
+        add_qc(qc, "strict_feature_count", "pass" if len(strict_features) == len(feature_dict) else "warn", len(strict_features), len(feature_dict), "Strict V2 biology features used for transfer alignment.")
         add_qc(qc, "transfer_samples_aligned", "pass" if len(raw_df) >= 1 else "fail", len(raw_df), ">=1", "At least one sample aligned.")
         add_qc(qc, "min_strict_feature_present_fraction", "pass" if min_present >= 0.80 else ("warn" if min_present >= 0.50 else "fail"), f"{min_present:.3f}", ">=0.80 preferred", "Fraction of strict features present as columns.")
         add_qc(qc, "min_strict_feature_nonmissing_fraction", "pass" if min_coverage >= 0.80 else "warn", f"{min_coverage:.3f}", ">=0.80 preferred; low coverage allowed for single-slide transfer with neutral missing-feature scaling", "Fraction of strict features with nonmissing values.")
-        add_qc(qc, "v2_reference_features_available", "pass" if len(v2_features) >= 139 else "warn", len(v2_features), 139, "Strict features available in V2 reference pool.")
+        add_qc(qc, "v2_reference_features_available", "pass" if set(v2_features) == set(strict_features) else "warn", len(v2_features), len(strict_features), "Strict features available in V2 reference pool.")
 
     except Exception as exc:
         errors.append("".join(traceback.format_exception(exc)))

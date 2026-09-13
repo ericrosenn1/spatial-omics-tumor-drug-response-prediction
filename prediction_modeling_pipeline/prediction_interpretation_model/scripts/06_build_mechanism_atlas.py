@@ -108,16 +108,16 @@ def split_semicolon_values(value: object) -> List[str]:
 
 def consensus_label(pos_count: int, neg_count: int, signed_sum: float) -> str:
     """Convert positive/negative counts and signed sum into a consensus label.
-    Summarizes whether a theme is net sensitivity-associated or resistance-associated."""
+    Summarizes whether a theme is net associated with higher teacher residual or associated with lower teacher residual."""
     # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if pos_count > neg_count and signed_sum > 0:
-        return "consensus_sensitivity_associated"
+        return "consensus_higher_teacher_residual_association"
     if neg_count > pos_count and signed_sum < 0:
-        return "consensus_resistance_associated"
+        return "consensus_lower_teacher_residual_association"
     if signed_sum > 0:
-        return "mixed_but_net_sensitivity_associated"
+        return "mixed_but_net_higher_teacher_residual_association"
     if signed_sum < 0:
-        return "mixed_but_net_resistance_associated"
+        return "mixed_but_net_lower_teacher_residual_association"
     return "balanced_or_ambiguous"
 
 
@@ -128,7 +128,7 @@ def build_theme_atlas(theme_effects: pd.DataFrame, treatment_dict: pd.DataFrame)
     df = theme_effects.copy()
     df["signed_theme_effect"] = safe_float_series(df["signed_theme_effect"])
     df["absolute_theme_effect"] = safe_float_series(df["absolute_theme_effect"]) if "absolute_theme_effect" in df.columns else df["signed_theme_effect"].abs()
-    df["direction_for_count"] = np.where(df["signed_theme_effect"] > 0, "sensitivity_associated", np.where(df["signed_theme_effect"] < 0, "resistance_associated", "ambiguous"))
+    df["direction_for_count"] = np.where(df["signed_theme_effect"] > 0, "higher_teacher_residual_association", np.where(df["signed_theme_effect"] < 0, "lower_teacher_residual_association", "ambiguous"))
 
     keep = [c for c in ["drug_key", "treatment_components", "component_classes", "interpretation_tier", "label_shuffle_validation_status"] if c in treatment_dict.columns]
     if keep:
@@ -144,16 +144,16 @@ def build_theme_atlas(theme_effects: pd.DataFrame, treatment_dict: pd.DataFrame)
         rows.append({
             "biological_theme": theme,
             "validated_treatment_count": int(sub["drug_key"].nunique()),
-            "sensitivity_associated_treatment_count": pos,
-            "resistance_associated_treatment_count": neg,
+            "higher_teacher_residual_association_treatment_count": pos,
+            "lower_teacher_residual_association_treatment_count": neg,
             "ambiguous_treatment_count": zero,
             "signed_theme_effect_sum": signed_sum,
             "signed_theme_effect_mean": float(sub["signed_theme_effect"].mean()),
             "absolute_theme_effect_sum": abs_sum,
             "absolute_theme_effect_mean": float(sub["absolute_theme_effect"].mean()),
             "consensus_direction": consensus_label(pos, neg, signed_sum),
-            "top_sensitivity_treatments": summarize_examples(sub.sort_values("signed_theme_effect", ascending=False)["drug_key"], 8),
-            "top_resistance_treatments": summarize_examples(sub.sort_values("signed_theme_effect", ascending=True)["drug_key"], 8),
+            "top_higher_teacher_residual_treatments": summarize_examples(sub.loc[sub["signed_theme_effect"] > 0].sort_values("signed_theme_effect", ascending=False)["drug_key"], 8),
+            "top_lower_teacher_residual_treatments": summarize_examples(sub.loc[sub["signed_theme_effect"] < 0].sort_values("signed_theme_effect", ascending=True)["drug_key"], 8),
         })
 
     atlas = pd.DataFrame(rows).sort_values(["absolute_theme_effect_sum", "biological_theme"], ascending=[False, True])
@@ -182,15 +182,15 @@ def build_feature_atlas(feature_effects: pd.DataFrame) -> pd.DataFrame:
             "feature_group": sub.get("feature_group", pd.Series([""])).dropna().astype(str).iloc[0] if "feature_group" in sub.columns and sub["feature_group"].notna().any() else "",
             "biological_theme": sub.get("biological_theme", pd.Series([""])).dropna().astype(str).iloc[0] if "biological_theme" in sub.columns and sub["biological_theme"].notna().any() else "",
             "validated_treatment_count": int(sub["drug_key"].nunique()),
-            "sensitivity_associated_treatment_count": pos,
-            "resistance_associated_treatment_count": neg,
+            "higher_teacher_residual_association_treatment_count": pos,
+            "lower_teacher_residual_association_treatment_count": neg,
             "signed_feature_effect_sum": signed_sum,
             "signed_feature_effect_mean": float(sub["signed_effect"].mean()),
             "absolute_feature_effect_sum": abs_sum,
             "absolute_feature_effect_mean": float(sub["effect_weight"].mean()),
             "consensus_direction": consensus_label(pos, neg, signed_sum),
-            "top_sensitivity_treatments": summarize_examples(sub.sort_values("signed_effect", ascending=False)["drug_key"], 6),
-            "top_resistance_treatments": summarize_examples(sub.sort_values("signed_effect", ascending=True)["drug_key"], 6),
+            "top_higher_teacher_residual_treatments": summarize_examples(sub.loc[sub["signed_effect"] > 0].sort_values("signed_effect", ascending=False)["drug_key"], 6),
+            "top_lower_teacher_residual_treatments": summarize_examples(sub.loc[sub["signed_effect"] < 0].sort_values("signed_effect", ascending=True)["drug_key"], 6),
         })
 
     return pd.DataFrame(rows).sort_values(["absolute_feature_effect_sum", "feature_name"], ascending=[False, True])
@@ -277,8 +277,8 @@ def build_component_atlas(theme_effects: pd.DataFrame, treatment_dict: pd.DataFr
                 "signed_theme_effect_sum": signed_sum,
                 "absolute_theme_effect_sum": float(sub["absolute_theme_effect"].sum()),
                 "mean_signed_theme_effect": float(sub["signed_theme_effect"].mean()),
-                "sensitivity_associated_treatment_count": pos,
-                "resistance_associated_treatment_count": neg,
+                "higher_teacher_residual_association_treatment_count": pos,
+                "lower_teacher_residual_association_treatment_count": neg,
                 "consensus_direction": consensus_label(pos, neg, signed_sum),
                 "example_treatments": summarize_examples(sub["drug_key"], 6),
             })
@@ -299,8 +299,8 @@ def build_component_atlas(theme_effects: pd.DataFrame, treatment_dict: pd.DataFr
                 "signed_theme_effect_sum": signed_sum,
                 "absolute_theme_effect_sum": float(sub["absolute_theme_effect"].sum()),
                 "mean_signed_theme_effect": float(sub["signed_theme_effect"].mean()),
-                "sensitivity_associated_treatment_count": pos,
-                "resistance_associated_treatment_count": neg,
+                "higher_teacher_residual_association_treatment_count": pos,
+                "lower_teacher_residual_association_treatment_count": neg,
                 "consensus_direction": consensus_label(pos, neg, signed_sum),
                 "example_treatments": summarize_examples(sub["drug_key"], 6),
             })
@@ -322,7 +322,7 @@ def build_sample_mechanism_tables(score_df: pd.DataFrame, theme_effects: pd.Data
     score["net_signed_spatial_interpretation_score"] = safe_float_series(score["net_signed_spatial_interpretation_score"])
     theme["signed_theme_effect"] = safe_float_series(theme["signed_theme_effect"])
 
-    keep = [c for c in ["sample_id", "drug_key", "net_signed_spatial_interpretation_score", "sensitivity_alignment_score", "resistance_alignment_score", "sample_spatial_alignment_label"] if c in score.columns]
+    keep = [c for c in ["sample_id", "drug_key", "net_signed_spatial_interpretation_score", "higher_teacher_residual_alignment_score", "lower_teacher_residual_alignment_score", "sample_spatial_alignment_label"] if c in score.columns]
     merged = score[keep].merge(
         theme[["drug_key", "biological_theme", "signed_theme_effect", "absolute_theme_effect"]].copy(),
         on="drug_key",
@@ -332,8 +332,8 @@ def build_sample_mechanism_tables(score_df: pd.DataFrame, theme_effects: pd.Data
     merged["sample_theme_alignment_abs"] = merged["sample_theme_alignment_score"].abs()
     merged["sample_theme_alignment_direction"] = np.where(
         merged["sample_theme_alignment_score"] > 0,
-        "sample_aligned_with_theme_sensitivity_pattern",
-        np.where(merged["sample_theme_alignment_score"] < 0, "sample_aligned_with_theme_resistance_pattern", "balanced_or_ambiguous"),
+        "positive_net_alignment_times_theme_effect",
+        np.where(merged["sample_theme_alignment_score"] < 0, "negative_net_alignment_times_theme_effect", "balanced_or_ambiguous"),
     )
 
     summary_rows: List[dict] = []
@@ -344,8 +344,8 @@ def build_sample_mechanism_tables(score_df: pd.DataFrame, theme_effects: pd.Data
             "n_biological_themes": int(sub["biological_theme"].nunique()),
             "mean_sample_theme_alignment_score": float(sub["sample_theme_alignment_score"].mean()),
             "sum_abs_sample_theme_alignment_score": float(sub["sample_theme_alignment_abs"].sum()),
-            "top_sensitivity_aligned_themes": summarize_examples(sub.sort_values("sample_theme_alignment_score", ascending=False)["biological_theme"], 5),
-            "top_resistance_aligned_themes": summarize_examples(sub.sort_values("sample_theme_alignment_score", ascending=True)["biological_theme"], 5),
+            "top_positive_alignment_theme_product_themes": summarize_examples(sub.loc[sub["sample_theme_alignment_score"] > 0].sort_values("sample_theme_alignment_score", ascending=False)["biological_theme"], 5),
+            "top_negative_alignment_theme_product_themes": summarize_examples(sub.loc[sub["sample_theme_alignment_score"] < 0].sort_values("sample_theme_alignment_score", ascending=True)["biological_theme"], 5),
             "interpretation_caveat": "Sample mechanism patterns summarize model-derived spatial alignments only; not clinical recommendations.",
         })
 

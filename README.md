@@ -117,6 +117,8 @@ prediction_modeling_pipeline/teacher_builder/precomputed_governed_fused_teacher_
 
 This file lets the downstream spatial prediction workflow start without rerunning the full expression and histology training process.
 
+The public gzip above is the historical handoff and remains unchanged. Corrected results use the separately versioned `20260913_readonly_repackage_of_corrected_20260907` artifact identified by its local authority manifest. Follow the [corrected handoff and prediction contract](prediction_modeling_pipeline/spatial_prediction_model_V2/docs/corrected_evaluation_and_prediction.md) and supply the recorded hashes for the teacher, spatial table and feature manifest together; the historical gzip is not the source of the corrected results.
+
 ### 5. Spatial Prediction Model V2
 
 Folder:

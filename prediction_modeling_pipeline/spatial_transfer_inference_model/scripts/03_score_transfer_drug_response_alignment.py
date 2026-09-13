@@ -9,9 +9,9 @@ Purpose:
 
 Interpretation:
     Positive transfer alignment score means the slide's spatial profile is more
-    aligned with sensitivity-associated residual biology for that treatment.
+    aligned with associated with higher teacher residual residual biology for that treatment.
     Negative score means the slide's spatial profile is more aligned with
-    resistance/barrier-associated residual biology for that treatment.
+    lower_teacher_residual/barrier-associated residual biology for that treatment.
 
 Policy:
     Research-use interpretation only. Not a clinical treatment recommendation.
@@ -64,9 +64,9 @@ def parse_args() -> argparse.Namespace:
 
 def label_alignment(score: float, threshold: float) -> str:
     if score >= threshold:
-        return "spatial_profile_sensitivity_aligned"
+        return "spatial_profile_higher_teacher_residual_aligned"
     if score <= -threshold:
-        return "spatial_profile_resistance_or_barrier_aligned"
+        return "spatial_profile_lower_teacher_residual_aligned"
     return "spatial_profile_indeterminate_or_balanced"
 
 
@@ -132,6 +132,14 @@ def main() -> int:
         contribution_rows: List[dict] = []
 
         feature_columns = [c for c in scaled.columns if c != "sample_id"]
+        from _alignment_contract import require_unique
+        require_unique(scaled, ["sample_id"], "scaled transfer table")
+        missing_effect_features = set(effects.feature_name) - set(feature_columns)
+        if missing_effect_features:
+            raise ValueError(f"Effects missing from aligned vector: {sorted(missing_effect_features)}")
+        raw_path = output_root / "02_aligned_features/01_aligned_feature_vectors/single_slide_raw_strict_feature_vector.tsv"
+        raw_observed = read_table(raw_path).set_index("sample_id").notna()
+
 
         for _, sample_row in scaled.iterrows():
             sample_id = str(sample_row["sample_id"])
@@ -149,14 +157,21 @@ def main() -> int:
                 used["transfer_feature_contribution"] = used["sample_feature_z"] * used["signed_effect"]
 
                 denom = float(used["signed_effect"].abs().sum())
-                if denom <= 0 or not np.isfinite(denom):
+                zero_effect_weight = denom <= 0 or not np.isfinite(denom)
+                if zero_effect_weight:
                     denom = 1.0
 
                 raw_sum = float(used["transfer_feature_contribution"].sum())
                 alignment_score = raw_sum / denom
                 favorable_score = sigmoid(alignment_score * 2.0)
 
-                coverage = float(len(used) / max(len(sub), 1))
+                coverage = float(raw_observed.loc[sample_id, used.feature_name].mean())
+                observed_weight_fraction = float(np.dot(raw_observed.loc[sample_id, used.feature_name].to_numpy(float), used.signed_effect.abs()) / denom)
+                score_status = ("UNSUPPORTED_ZERO_EFFECT_WEIGHT" if zero_effect_weight else
+                                "UNSUPPORTED_NO_OBSERVED_EFFECT_WEIGHT" if observed_weight_fraction <= 0 else
+                                "SCORED_PARTIAL_FEATURE_COVERAGE" if observed_weight_fraction < 1 else "SCORED")
+                if score_status.startswith("UNSUPPORTED"):
+                    alignment_score = favorable_score = np.nan
                 pos_sum = float(used.loc[used["transfer_feature_contribution"] > 0, "transfer_feature_contribution"].sum())
                 neg_sum = float(used.loc[used["transfer_feature_contribution"] < 0, "transfer_feature_contribution"].sum())
 
@@ -164,13 +179,17 @@ def main() -> int:
                     "sample_id": sample_id,
                     "drug_key": drug_key,
                     "transfer_alignment_score": alignment_score,
+                    "score_status": score_status,
                     "transfer_alignment_raw_sum": raw_sum,
-                    "spatial_favorable_score_0_1_not_calibrated": favorable_score,
+                    "rescaled_alignment_score_0_1_not_calibrated": favorable_score,
                     "spatial_response_alignment": label_alignment(alignment_score, args.score_threshold),
                     "confidence_level": confidence_level(alignment_score, coverage),
                     "feature_effects_available_for_drug": int(len(sub)),
                     "feature_effects_used_for_scoring": int(len(used)),
                     "feature_effect_coverage_fraction": coverage,
+                    "observed_effect_weight_fraction": observed_weight_fraction,
+                    "missing_value_policy": "training_mean_z0_with_observed_coverage",
+
                     "positive_contribution_sum": pos_sum,
                     "negative_contribution_sum": neg_sum,
                     "absolute_contribution_sum": float(used["transfer_feature_contribution"].abs().sum()),
@@ -197,7 +216,7 @@ def main() -> int:
                     "transfer_theme_contribution_sum": contribution_sum,
                     "transfer_theme_abs_contribution_sum": float(pd.to_numeric(sub["transfer_feature_contribution"], errors="coerce").abs().sum()),
                     "n_features": int(sub["feature_name"].nunique()),
-                    "theme_alignment_direction": "sensitivity_supporting" if contribution_sum > 0 else ("resistance_or_barrier_supporting" if contribution_sum < 0 else "balanced"),
+                    "theme_alignment_direction": "higher_teacher_residual_supporting" if contribution_sum > 0 else ("lower_teacher_residual_supporting" if contribution_sum < 0 else "balanced"),
                     "top_features_in_theme": summarize_examples(sub.assign(abs_c=pd.to_numeric(sub["transfer_feature_contribution"], errors="coerce").abs()).sort_values("abs_c", ascending=False)["feature_name"], 6),
                 })
 
@@ -210,7 +229,7 @@ def main() -> int:
         write_tsv(theme_dir / "single_slide_treatment_theme_contributions.tsv", themes)
 
         add_qc(qc, "samples_scored", "pass" if scores["sample_id"].nunique() >= 1 else "fail", scores["sample_id"].nunique() if not scores.empty else 0, ">=1", "At least one transfer sample scored.")
-        add_qc(qc, "treatments_scored", "pass" if scores["drug_key"].nunique() == 27 else "warn", scores["drug_key"].nunique() if not scores.empty else 0, 27, "Expected 27 PIM validated treatment cards.")
+        add_qc(qc, "treatments_scored", "pass" if set(scores["drug_key"]) == set(cards_drugs) else "warn", scores["drug_key"].nunique() if not scores.empty else 0, len(cards_drugs), "Expected selected PIM treatment cards.")
         add_qc(qc, "feature_contribution_rows", "pass" if len(contributions) > 0 else "fail", len(contributions), ">0", "Feature contributions generated.")
         add_qc(qc, "theme_contribution_rows", "pass" if len(themes) > 0 else "fail", len(themes), ">0", "Theme contributions generated.")
         if not scores.empty:
@@ -260,9 +279,9 @@ def main() -> int:
         str(theme_dir / "single_slide_treatment_theme_contributions.tsv"),
         "",
         "Interpretation",
-        "Positive transfer_alignment_score means the slide's V2-scaled spatial profile is aligned with sensitivity-associated residual biology for the treatment.",
-        "Negative transfer_alignment_score means the slide's profile is aligned with resistance/barrier-associated residual biology.",
-        "The spatial_favorable_score_0_1_not_calibrated column is a monotonic score for ranking, not a calibrated clinical probability.",
+        "Positive transfer_alignment_score means the slide's V2-scaled spatial profile is aligned with associated with higher teacher residual residual biology for the treatment.",
+        "Negative transfer_alignment_score means the slide's profile is aligned with lower_teacher_residual/barrier-associated residual biology.",
+        "The rescaled_alignment_score_0_1_not_calibrated column is a monotonic score for ranking, not a calibrated clinical probability.",
         "",
         "QC checks",
         qc_df.to_string(index=False) if not qc_df.empty else "none",

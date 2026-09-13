@@ -39,9 +39,13 @@ def choose_sep(path: Path) -> str:
     return "\t" if path.suffix.lower() in [".tsv", ".tab"] else ","
 
 
-def read_table(path: Path, nrows: Optional[int] = None, usecols: Optional[Sequence[str]] = None) -> pd.DataFrame:
+def read_table(path: Path, nrows: Optional[int] = None, usecols: Optional[Sequence[str]] = None, keep_default_na: bool = True) -> pd.DataFrame:
     path = Path(path)
-    return pd.read_csv(path, sep=choose_sep(path), nrows=nrows, usecols=usecols, low_memory=False)
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        header = next(csv.reader(handle, delimiter=choose_sep(path)))
+    if len(header) != len(set(header)):
+        raise ValueError(f"Duplicate raw table headers: {path}")
+    return pd.read_csv(path, sep=choose_sep(path), nrows=nrows, usecols=usecols, low_memory=False, keep_default_na=keep_default_na)
 
 
 def read_header(path: Path) -> List[str]:
@@ -563,152 +567,63 @@ def load_pim_spatial_feature_pool(pim_run_root: Path, usecols: Optional[Sequence
         + " | ".join(errors[:8])
     )
 
-# FILE-MAP PIM LOADER OVERRIDES FOR REORG-AWARE TRANSFER
-# These definitions intentionally override earlier loader definitions.
-
-def _stim_norm_col_filemap(value):
-    return re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
-
-
-def _stim_resolve_col_filemap(columns, aliases):
-    norm_to_original = {_stim_norm_col_filemap(c): c for c in columns}
-    for alias in aliases:
-        key = _stim_norm_col_filemap(alias)
-        if key in norm_to_original:
-            return norm_to_original[key]
-    return None
+# Source-bound endpoint loading. Never use a module-global map to override an explicit run.
+PIM_ENDPOINT_PATHS = {
+    "feature_dictionary": "02_feature_and_treatment_dictionary/01_feature_dictionary/strict_spatial_feature_dictionary.tsv",
+    "signed_feature_effects": "03_signed_spatial_effects/01_treatment_feature_effects/signed_treatment_feature_effects.tsv",
+    "signed_theme_effects": "03_signed_spatial_effects/02_treatment_theme_effects/signed_treatment_theme_effects.tsv",
+    "treatment_cards": "04_treatment_interpretation_cards/02_cards_tsv/treatment_interpretation_cards.tsv",
+    "spatial_feature_pool": "01_prepared_inputs/02_copied_v2_tables/tables/v2_spatial_features_broad_pool.tsv",
+}
 
 
-def _stim_transfer_file_map_path():
-    return Path(__file__).resolve().parents[1] / "configs" / "resolved_pim_transfer_file_map.json"
-
-
-def _stim_load_transfer_file_map():
-    path = _stim_transfer_file_map_path()
-    if not path.exists():
-        raise FileNotFoundError(f"Transfer PIM file map not found: {path}")
-    data = json.loads(path.read_text(encoding="utf-8"))
-    if "files" not in data:
-        raise ValueError(f"Transfer PIM file map missing files entry: {path}")
-    return data
-
-
-def _stim_mapped_path(key):
-    data = _stim_load_transfer_file_map()
-    entry = data["files"].get(key, {})
-    value = entry.get("path", "")
-    if not value:
-        raise KeyError(f"Transfer PIM file map missing path for key: {key}")
-    path = Path(value)
-    if not path.exists():
-        raise FileNotFoundError(f"Mapped PIM file for {key} does not exist: {path}")
-    return path
-
-
-def _stim_read_mapped_table(key, nrows=None, usecols=None):
-    path = _stim_mapped_path(key)
-    if usecols is not None:
-        header = read_header(path)
-        available = [c for c in usecols if c in header]
-        if not available:
-            raise ValueError(f"No requested columns are available in mapped table {key}: {path}")
-        return read_table(path, nrows=nrows, usecols=available)
+def _source_bound_table(pim_run_root, key, usecols=None, nrows=None):
+    root = Path(pim_run_root).resolve()
+    path = root / PIM_ENDPOINT_PATHS[key]
+    if not path.is_file() and key == "spatial_feature_pool":
+        # Large reference tables can be manifest-referenced instead of copied.
+        index_path = root / "01_prepared_inputs/01_source_manifests/prepared_interpretation_source_index.tsv"
+        index = read_table(index_path)
+        hit = index[index.source_id == "v2_spatial_features_broad_pool"]
+        if len(hit) != 1:
+            raise ValueError("Ambiguous or missing spatial reference in selected PIM source index")
+        value = hit.iloc[0]["source_path"]
+        path = Path(value)
+        summary = json.loads((root / "prediction_interpretation_model_step01_summary.json").read_text())
+        v2_root = Path(summary["v2_run_root"]).resolve()
+        if not path.resolve().is_relative_to(v2_root):
+            raise ValueError("Reference source lies outside selected PIM's V2 run")
+    if not path.is_file():
+        raise FileNotFoundError(f"Selected PIM run lacks {key}: {path}")
     return read_table(path, nrows=nrows, usecols=usecols)
 
 
+def _unique_endpoint_table(root, key, columns):
+    from _alignment_contract import require_unique
+    result = _source_bound_table(root, key)
+    require_unique(result, columns, key)
+    return result
+
+
 def load_pim_feature_dictionary(pim_run_root):
-    df = _stim_read_mapped_table("feature_dictionary")
-    feature_col = _stim_resolve_col_filemap(
-        df.columns,
-        [
-            "feature_name",
-            "feature",
-            "spatial_feature",
-            "spatial_feature_name",
-            "model_feature",
-            "variable",
-            "feature_id",
-            "Feature Name",
-            "Spatial Feature",
-        ],
-    )
-    if feature_col is None:
-        raise ValueError(f"Mapped feature dictionary has no feature-like column. Columns: {list(df.columns)}")
-    if feature_col != "feature_name":
-        df = df.rename(columns={feature_col: "feature_name"})
-    df["feature_name"] = df["feature_name"].astype(str)
-    df = df[df["feature_name"].notna()].copy()
-    df = df[df["feature_name"].str.lower() != "nan"].copy()
-    df = df.drop_duplicates("feature_name").reset_index(drop=True)
-    return df
+    return _unique_endpoint_table(pim_run_root, "feature_dictionary", ["feature_name"])
 
 
 def strict_feature_names(pim_run_root):
-    df = load_pim_feature_dictionary(pim_run_root)
-    return sorted(df["feature_name"].dropna().astype(str).unique())
+    return load_pim_feature_dictionary(pim_run_root).feature_name.astype(str).tolist()
 
 
 def load_pim_spatial_feature_pool(pim_run_root, usecols=None, nrows=None):
-    return _stim_read_mapped_table("spatial_feature_pool", nrows=nrows, usecols=usecols)
+    return _source_bound_table(pim_run_root, "spatial_feature_pool", usecols, nrows)
 
 
 def load_pim_signed_feature_effects(pim_run_root):
-    df = _stim_read_mapped_table("signed_feature_effects")
-
-    drug_col = _stim_resolve_col_filemap(df.columns, ["drug_key", "treatment_key", "drug", "treatment", "Treatment Key"])
-    feature_col = _stim_resolve_col_filemap(df.columns, ["feature_name", "feature", "spatial_feature", "spatial_feature_name", "Feature Name"])
-    signed_col = _stim_resolve_col_filemap(df.columns, ["signed_effect", "signed feature effect", "signed_feature_effect", "effect", "Signed Effect"])
-
-    if drug_col is None or feature_col is None or signed_col is None:
-        raise ValueError(
-            "Mapped signed feature effect table lacks required columns. "
-            f"drug_col={drug_col}; feature_col={feature_col}; signed_col={signed_col}; columns={list(df.columns)}"
-        )
-
-    rename = {}
-    if drug_col != "drug_key":
-        rename[drug_col] = "drug_key"
-    if feature_col != "feature_name":
-        rename[feature_col] = "feature_name"
-    if signed_col != "signed_effect":
-        rename[signed_col] = "signed_effect"
-    if rename:
-        df = df.rename(columns=rename)
-
-    df["drug_key"] = df["drug_key"].astype(str)
-    df["feature_name"] = df["feature_name"].astype(str)
-    return df
+    return _unique_endpoint_table(pim_run_root, "signed_feature_effects", ["drug_key", "feature_name"])
 
 
 def load_pim_signed_theme_effects(pim_run_root):
-    df = _stim_read_mapped_table("signed_theme_effects")
-
-    drug_col = _stim_resolve_col_filemap(df.columns, ["drug_key", "treatment_key", "drug", "treatment", "Treatment Key"])
-    theme_col = _stim_resolve_col_filemap(df.columns, ["biological_theme", "biology_theme", "theme", "Biology Theme"])
-    signed_col = _stim_resolve_col_filemap(df.columns, ["signed_theme_effect", "signed_effect", "effect", "Signed Theme Effect"])
-
-    rename = {}
-    if drug_col is not None and drug_col != "drug_key":
-        rename[drug_col] = "drug_key"
-    if theme_col is not None and theme_col != "biological_theme":
-        rename[theme_col] = "biological_theme"
-    if signed_col is not None and signed_col != "signed_theme_effect":
-        rename[signed_col] = "signed_theme_effect"
-    if rename:
-        df = df.rename(columns=rename)
-
-    if "drug_key" in df.columns:
-        df["drug_key"] = df["drug_key"].astype(str)
-    return df
+    return _unique_endpoint_table(pim_run_root, "signed_theme_effects", ["drug_key", "biological_theme"])
 
 
 def load_pim_treatment_cards(pim_run_root):
-    df = _stim_read_mapped_table("treatment_cards")
-
-    drug_col = _stim_resolve_col_filemap(df.columns, ["drug_key", "treatment_key", "drug", "treatment", "Treatment Key"])
-    if drug_col is None:
-        raise ValueError(f"Mapped treatment card table has no drug_key-like column. Columns: {list(df.columns)}")
-    if drug_col != "drug_key":
-        df = df.rename(columns={drug_col: "drug_key"})
-    df["drug_key"] = df["drug_key"].astype(str)
-    return df
+    return _unique_endpoint_table(pim_run_root, "treatment_cards", ["drug_key"])

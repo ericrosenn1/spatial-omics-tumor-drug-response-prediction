@@ -10,7 +10,7 @@ The main interpretation products include:
 
 - signed spatial feature effects;
 - treatment-level interpretation cards;
-- sample-level spatial sensitivity/resistance alignment scores;
+- sample-level spatial higher/lower teacher residual alignment scores;
 - cross-treatment mechanism atlases;
 - treatment similarity summaries;
 - final publication tables;
@@ -21,8 +21,8 @@ The main interpretation products include:
 The goal is to make spatial prediction results interpretable at three levels:
 
 1. **Feature level:** Which spatial architecture features are associated with higher or lower treatment-response residuals?
-2. **Treatment level:** Which spatial mechanisms are associated with sensitivity or resistance for each validated treatment?
-3. **Sample level:** Which samples have spatial profiles aligned with sensitivity-associated or resistance-associated signatures?
+2. **Treatment level:** Which spatial mechanisms are associated with higher or lower teacher residuals for each validated treatment?
+3. **Sample level:** Which samples have spatial profiles aligned with higher-teacher-residual-associated or lower-teacher-residual-associated signatures?
 
 ## Scientific motivation
 
@@ -46,7 +46,7 @@ The output is intended for biological interpretation and hypothesis generation. 
 
 The required input is a completed `spatial_prediction_model_V2` run folder. The upstream V2 model produces residual modeling outputs, the strict spatial biology feature registry, label-shuffle-validated treatment models, recurrent spatial features, recurrent biology themes, and final QC files used by this interpretation layer.
 
-The development run used for this project had the following source contract:
+The historical May 2026 development run had the following source contract (these dimensions are not defaults or acceptance criteria for a corrected run):
 
 ```text
 34,881 sample-treatment pair rows
@@ -73,13 +73,13 @@ First, it validates and prepares the V2 source files. It checks the expected V2 
 
 Second, it builds dictionaries for features, treatments, treatment components, and biology themes. These dictionaries convert model feature names into readable biological annotations and organize treatments into interpretable component classes.
 
-Third, it computes signed spatial effects. V2 feature importance scores are useful, but they do not by themselves indicate whether a feature is associated with sensitivity or resistance. This module assigns directionality by correlating spatial feature values with the V2 residual response target, `fused_residual_vs_prior`, and weighting those associations by V2 model evidence.
+Third, it computes signed spatial effects. V2 feature importance scores are useful, but they do not by themselves indicate whether a feature is associated with higher or lower teacher residuals. This module assigns directionality by correlating spatial feature values with the V2 residual response target, `fused_residual_vs_prior`, and weighting those associations by V2 model evidence.
 
 A positive signed effect means that higher values of a spatial feature are associated with above-prior response residuals for a treatment. A negative signed effect means that higher values of a spatial feature are associated with below-prior response residuals.
 
-Fourth, it summarizes treatment-level mechanisms. For each label-shuffle-validated treatment, the model generates a treatment interpretation card containing the strongest sensitivity-associated features, resistance-associated features, sensitivity-associated biology themes, resistance-associated biology themes, and relevant validation metrics.
+Fourth, it summarizes treatment-level mechanisms. For each label-shuffle-validated treatment, the model generates a treatment interpretation card containing the strongest higher-teacher-residual-associated features, lower-teacher-residual-associated features, higher-teacher-residual-associated biology themes, lower-teacher-residual-associated biology themes, and relevant validation metrics.
 
-Fifth, it generates sample-level interpretation scores. For each sample-treatment pair with validated treatment coverage, the model scores whether the sample's spatial profile aligns more strongly with sensitivity-associated or resistance-associated spatial signatures.
+Fifth, it generates sample-level interpretation scores. For each sample-treatment pair with validated treatment coverage, the model scores whether the sample's spatial profile aligns more strongly with higher-teacher-residual-associated or lower-teacher-residual-associated spatial signatures.
 
 Finally, it builds final reporting outputs, including mechanism atlases, final publication tables, final figures, final narrative reports, QC checks, and a final package.
 
@@ -181,7 +181,7 @@ python .\scripts\00_run_prediction_interpretation_model.py `
 
 To run only selected steps, pass a comma-separated list:
 
-```powershell
+```text
 --steps 03,04,05
 ```
 
@@ -250,23 +250,23 @@ Step 04 writes one text card per label-shuffle-validated treatment. Each card su
 
 - treatment key and treatment components;
 - validation evidence;
-- sensitivity-associated spatial features;
-- resistance-associated spatial features;
-- sensitivity-associated biology themes;
-- resistance-associated biology themes;
+- higher-teacher-residual-associated spatial features;
+- lower-teacher-residual-associated spatial features;
+- higher-teacher-residual-associated biology themes;
+- lower-teacher-residual-associated biology themes;
 - interpretation caveats.
 
 These cards make the model output readable without requiring the reader to inspect raw SHAP or feature-effect tables.
 
 ## Sample-level interpretation scores
 
-Step 05 computes sample-treatment spatial interpretation scores for validated treatments. A positive net score means the sample's spatial profile is aligned with sensitivity-associated spatial biology for that treatment. A negative net score means the sample's spatial profile is aligned with resistance-associated spatial biology for that treatment.
+Step 05 computes sample-treatment spatial interpretation scores for validated treatments. A positive net score means the sample's spatial profile is aligned with higher-teacher-residual-associated spatial biology for that treatment. A negative net score means the sample's spatial profile is aligned with lower-teacher-residual-associated spatial biology for that treatment.
 
 These scores are not response predictions and are not treatment recommendations. They are interpretation-layer summaries of how a sample's spatial architecture aligns with signed spatial mechanisms learned from V2 residual models.
 
-## Coverage note: 93 of 102 samples in sample-level treatment scoring
+## Historical coverage example: 93 of 102 samples in sample-level treatment scoring
 
-The upstream V2 full run contains 102 spatial samples. However, sample-level treatment scoring in this interpretation layer is restricted to the 27 label-shuffle-validated treatment keys. Those validated treatment keys have pair-level residual rows for 93 samples, not all 102.
+The historical development example contains 102 spatial samples. Current coverage is derived from the selected source files, not these historical counts. However, sample-level treatment scoring in this interpretation layer is restricted to the 27 label-shuffle-validated treatment keys. Those validated treatment keys have pair-level residual rows for 93 samples, not all 102.
 
 Therefore:
 
@@ -344,3 +344,13 @@ This module summarizes associations between spatial features and treatment-respo
 
 Treatment cards, mechanism atlases, and sample-level scores should be interpreted as biological hypotheses and reporting summaries. They are not clinical treatment recommendations.
 
+
+## Corrected-source contract
+
+Step01 records dimensions from its explicitly selected V2 source. Optional `--expected-*` arguments add explicit guards; downstream steps check parity with the recorded source dimensions. Counts and acceptance labels are never borrowed from an earlier atlas. The source run's conditional-development or independently supported status must remain attached in endpoint manifests and manuscript reporting.
+
+Signed feature effects are empirical associations weighted by model evidence. Within-cohort PIM sample scores use their documented top-feature subset; transfer scoring uses the exported effect set. Both are interpretation rules, distinct from fitted V2 residual predictions. They do not inherit the base estimator's held-out metrics. Full-cohort signed effects and reference scaling support deployment interpretation only; evaluate the exact rule with training-only effects and references before claiming its predictive performance.
+
+For a repaired feature reference, `prepare_frozen_spatial_reference.py` exports the original V2 column schema using preprocessing saved in predictor bundles, and transforms external inputs with the same fitted reference. It audits cohort identity, missingness changes, numerical differences and batch equivalence. Supply the resulting training TSV to the orchestrator with `--spatial-feature-override PATH --spatial-feature-override-sha256 SHA256`. Step01 verifies the exact hash, full ordered schema and canonical sample set, records the immutable V2 source and derivative separately, and copies the derivative for downstream effects/scaling. A path alone cannot override the spatial source.
+
+Treatment dictionaries and cards retain exact `drug_key` strings. A case-level recorded-treatment profile with several components does not establish simultaneous administration or a named clinical regimen.

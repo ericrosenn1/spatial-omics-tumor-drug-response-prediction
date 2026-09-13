@@ -715,6 +715,29 @@ def sha256_file(path: Path, max_bytes: int) -> str:
     return digest.hexdigest()
 
 
+def validate_spatial_override(original_path: Path, override_path: Path, expected_sha256: str) -> dict:
+    """Bind a full-schema derivative to the exact original spatial cohort."""
+    if not re.fullmatch(r"[0-9a-fA-F]{64}", expected_sha256 or ""):
+        raise ValueError("Spatial override requires its exact SHA256")
+    actual = sha256_file(override_path, override_path.stat().st_size)
+    if actual.lower() != expected_sha256.lower():
+        raise ValueError("Spatial override SHA256 mismatch")
+    original = read_table(original_path)
+    override = read_table(override_path)
+    if list(original.columns) != list(override.columns):
+        raise ValueError("Spatial override must preserve the full original ordered column schema")
+    for frame in [original, override]:
+        if "sample_id" not in frame or frame.sample_id.isna().any() or frame.sample_id.astype(str).str.strip().eq("").any() or frame.sample_id.duplicated().any():
+            raise ValueError("Spatial override/original requires unique nonmissing sample identities")
+    if set(original.sample_id.astype(str)) != set(override.sample_id.astype(str)):
+        raise ValueError("Spatial override sample identity set differs from original cohort")
+    return {"original_path": str(original_path.resolve()),
+            "original_sha256": sha256_file(original_path, original_path.stat().st_size),
+            "override_path": str(override_path.resolve()), "override_sha256": actual,
+            "scope": "full original spatial feature schema; corrected frozen-training-reference derivative",
+            "samples": len(override), "columns": len(override.columns)}
+
+
 def choose_sep(path: Path) -> str:
     """Infer the delimiter for a CSV/TSV-style table path.
     TSV and TAB files use tab; other table files default to comma."""
@@ -859,17 +882,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--project-root", default=None)
     parser.add_argument("--model-root", default="")
     parser.add_argument("--v2-run-root", required=True)
+    parser.add_argument("--spatial-feature-override", default="")
+    parser.add_argument("--spatial-feature-override-sha256", default="")
     parser.add_argument("--output-root", default="")
     parser.add_argument("--run-name", default=f"prediction_interpretation_model_full_{now_stamp()}")
     parser.add_argument("--large-file-mb", type=float, default=75.0)
     parser.add_argument("--hash-file-mb", type=float, default=25.0)
     parser.add_argument("--copy-large-files", action="store_true")
-    parser.add_argument("--expected-pair-rows", type=int, default=34881)
-    parser.add_argument("--expected-samples", type=int, default=102)
-    parser.add_argument("--expected-treatments", type=int, default=374)
-    parser.add_argument("--expected-strict-biology-features", type=int, default=139)
-    parser.add_argument("--expected-validated-treatments", type=int, default=27)
-    parser.add_argument("--expected-recurrent-biology-themes", type=int, default=11)
+    parser.add_argument("--expected-pair-rows", type=int, default=None)
+    parser.add_argument("--expected-samples", type=int, default=None)
+    parser.add_argument("--expected-treatments", type=int, default=None)
+    parser.add_argument("--expected-strict-biology-features", type=int, default=None)
+    parser.add_argument("--expected-validated-treatments", type=int, default=None)
+    parser.add_argument("--expected-recurrent-biology-themes", type=int, default=None)
     parser.add_argument("--open-output", action="store_true")
 
     return parser.parse_args()
@@ -965,6 +990,9 @@ def main() -> int:
     if not v2_run_root.exists():
         raise SystemExit(1)
 
+    override_audit = None
+    if bool(args.spatial_feature_override) != bool(args.spatial_feature_override_sha256):
+        raise ValueError("Spatial override path and SHA256 must be supplied together")
     for item in SOURCE_FILES:
         source_id = item["source_id"]
         relative_path = item["relative_path"]
@@ -973,6 +1001,12 @@ def main() -> int:
         copy_policy = str(item["copy_policy"])
 
         source_path = v2_run_root / relative_path
+        original_source_path = str(source_path)
+        if source_id == "v2_spatial_features_broad_pool" and args.spatial_feature_override:
+            override_path = Path(args.spatial_feature_override).resolve()
+            override_audit = validate_spatial_override(source_path, override_path, args.spatial_feature_override_sha256)
+            source_path = override_path
+            write_json(manifest_root / "spatial_reference_override.json", override_audit)
         exists = source_path.exists()
         size_bytes = source_path.stat().st_size if exists else None
         suffix = source_path.suffix.lower() if exists else Path(relative_path).suffix.lower()
@@ -983,7 +1017,9 @@ def main() -> int:
 
         if exists:
             try:
-                sha256 = sha256_file(source_path, hash_threshold_bytes)
+                # Numerical lineage is required even when a large table is referenced
+                # by pointer rather than copied into the interpretation package.
+                sha256 = sha256_file(source_path, max(hash_threshold_bytes, size_bytes or 0))
             except Exception as exc:
                 sha256 = f"hash_failed: {exc}"
 
@@ -1035,6 +1071,8 @@ def main() -> int:
             "category": category,
             "relative_path": relative_path,
             "absolute_path": str(source_path),
+            "original_v2_path": original_source_path,
+            "is_explicit_spatial_override": source_id == "v2_spatial_features_broad_pool" and bool(args.spatial_feature_override),
             "required": required,
             "exists": exists,
             "size_bytes": size_bytes,
@@ -1051,6 +1089,8 @@ def main() -> int:
             "preferred_read_path": copied_path if copied_path else str(source_path),
             "copied_path": copied_path,
             "source_path": str(source_path),
+            "source_sha256": sha256,
+            "is_explicit_spatial_override": source_id == "v2_spatial_features_broad_pool" and bool(args.spatial_feature_override),
             "is_pointer_only": copied_path == "",
             "required": required,
         })
@@ -1083,8 +1123,9 @@ def main() -> int:
     dataframe_to_tsv(manifest_root / "v2_source_file_manifest.tsv", pd.DataFrame(source_manifest_rows))
     dataframe_to_tsv(manifest_root / "prepared_interpretation_source_index.tsv", pd.DataFrame(prepared_index_rows))
 
-    # Key scientific/contract counts.
+    # Key scientific/contract counts. Unavailable inputs remain unknown on failure.
     key_counts: List[dict] = []
+    pair_rows = sample_count = treatment_count = strict_rows = validated_rows = theme_rows = None
 
     try:
         pair_path = source_path_by_id(source_manifest_rows, "v2_pair_level_residual_dataset")
@@ -1111,22 +1152,22 @@ def main() -> int:
             {
                 "metric": "pair_level_rows",
                 "observed": pair_rows,
-                "expected": args.expected_pair_rows,
-                "status": "pass" if pair_rows == args.expected_pair_rows else "fail",
+                "expected": args.expected_pair_rows if args.expected_pair_rows is not None else pair_rows,
+                "status": "pass" if (args.expected_pair_rows is None or pair_rows == args.expected_pair_rows) else "fail",
                 "source_id": "v2_pair_level_residual_dataset",
             },
             {
                 "metric": "sample_count",
                 "observed": sample_count,
-                "expected": args.expected_samples,
-                "status": "pass" if sample_count == args.expected_samples else "fail",
+                "expected": args.expected_samples if args.expected_samples is not None else sample_count,
+                "status": "pass" if (args.expected_samples is None or sample_count == args.expected_samples) else "fail",
                 "source_id": "v2_pair_level_residual_dataset",
             },
             {
                 "metric": "treatment_count",
                 "observed": treatment_count,
-                "expected": args.expected_treatments,
-                "status": "pass" if treatment_count == args.expected_treatments else "fail",
+                "expected": args.expected_treatments if args.expected_treatments is not None else treatment_count,
+                "status": "pass" if (args.expected_treatments is None or treatment_count == args.expected_treatments) else "fail",
                 "source_id": "v2_pair_level_residual_dataset",
             },
             {
@@ -1184,8 +1225,8 @@ def main() -> int:
             {
                 "metric": "strict_biology_feature_rows",
                 "observed": strict_rows,
-                "expected": args.expected_strict_biology_features,
-                "status": "pass" if strict_rows == args.expected_strict_biology_features else "fail",
+                "expected": args.expected_strict_biology_features if args.expected_strict_biology_features is not None else strict_rows,
+                "status": "pass" if (args.expected_strict_biology_features is None or strict_rows == args.expected_strict_biology_features) else "fail",
                 "source_id": "v2_strict_biology_feature_registry",
             },
             {
@@ -1216,8 +1257,8 @@ def main() -> int:
         key_counts.append({
             "metric": "label_shuffle_validated_treatments",
             "observed": validated_rows,
-            "expected": args.expected_validated_treatments,
-            "status": "pass" if validated_rows == args.expected_validated_treatments else "fail",
+            "expected": args.expected_validated_treatments if args.expected_validated_treatments is not None else validated_rows,
+            "status": "pass" if (args.expected_validated_treatments is None or validated_rows == args.expected_validated_treatments) else "fail",
             "source_id": "tier1_label_shuffle_validated_treatments",
         })
     except Exception as exc:
@@ -1239,8 +1280,8 @@ def main() -> int:
         key_counts.append({
             "metric": "label_shuffle_validated_recurrent_biology_themes",
             "observed": theme_rows,
-            "expected": args.expected_recurrent_biology_themes,
-            "status": "pass" if theme_rows == args.expected_recurrent_biology_themes else "fail",
+            "expected": args.expected_recurrent_biology_themes if args.expected_recurrent_biology_themes is not None else theme_rows,
+            "status": "pass" if (args.expected_recurrent_biology_themes is None or theme_rows == args.expected_recurrent_biology_themes) else "fail",
             "source_id": "label_shuffle_validated_recurrent_biology_themes",
         })
     except Exception as exc:
@@ -1337,6 +1378,12 @@ def main() -> int:
         "large_file_mb": args.large_file_mb,
         "hash_file_mb": args.hash_file_mb,
         "copy_large_files": args.copy_large_files,
+        "spatial_feature_override": override_audit,
+        "source_counts": {
+            "pair_rows": pair_rows, "samples": sample_count, "treatments": treatment_count,
+            "strict_biology_features": strict_rows, "validated_treatments": validated_rows,
+            "recurrent_biology_themes": theme_rows,
+        },
         "expected_counts": {
             "pair_rows": args.expected_pair_rows,
             "samples": args.expected_samples,

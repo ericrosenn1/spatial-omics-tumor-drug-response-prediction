@@ -120,17 +120,17 @@ def make_explanation(row: dict, pos_features: str, neg_features: str, pos_themes
     score = fmt_float(row.get("transfer_alignment_score", ""), 4)
     confidence = str(row.get("confidence_level", ""))
 
-    if "sensitivity_aligned" in label:
-        lead = f"For {drug}, the slide is spatially sensitivity-aligned in the frozen V2 residual-biology atlas."
+    if "higher_teacher_residual_aligned" in label:
+        lead = f"For {drug}, the slide is spatially aligned with higher teacher residual in the frozen V2 residual-biology atlas."
         why = f"Main supporting features/themes: {pos_features}; {pos_themes}."
-        caution = f"Potential resistance or penetration-barrier signals still present: {barrier_text if barrier_text != 'none' else neg_features}."
-    elif "resistance" in label or "barrier" in label:
-        lead = f"For {drug}, the slide is spatially resistance/barrier-aligned in the frozen V2 residual-biology atlas."
-        why = f"Main resistance/barrier features/themes: {barrier_text if barrier_text != 'none' else neg_features}; {neg_themes}."
-        caution = f"Sensitivity-supporting signals were weaker or counterbalanced: {pos_features}."
+        caution = f"Features supporting lower teacher residual still present: {barrier_text if barrier_text != 'none' else neg_features}."
+    elif "lower_teacher_residual" in label or "barrier" in label:
+        lead = f"For {drug}, the slide is spatially aligned with lower teacher residual in the frozen V2 residual-biology atlas."
+        why = f"Main features/themes supporting lower teacher residual: {barrier_text if barrier_text != 'none' else neg_features}; {neg_themes}."
+        caution = f"Higher teacher residual supporting signals were weaker or counterbalanced: {pos_features}."
     else:
         lead = f"For {drug}, the slide has an indeterminate or balanced spatial response-alignment profile."
-        why = f"Sensitivity-supporting and resistance/barrier-supporting signals are mixed. Positive signals: {pos_features}. Negative signals: {neg_features}."
+        why = f"Higher teacher residual supporting and lower teacher residual supporting signals are mixed. Positive signals: {pos_features}. Negative signals: {neg_features}."
         caution = f"Dominant themes should be reviewed rather than treated as a binary prediction."
 
     return f"{lead} Alignment score={score}; confidence={confidence}. {why} {caution} Research-use only; not a clinical treatment recommendation."
@@ -171,6 +171,7 @@ def main() -> int:
 
         card_cols = [c for c in [
             "drug_key",
+            "source_estimator_validation_scope",
             "treatment_components",
             "component_classes",
             "interpretation_tier",
@@ -221,37 +222,44 @@ def main() -> int:
             explanation = make_explanation(d, pos_features, neg_features, pos_themes, neg_themes, barrier_text)
 
             alignment = str(d.get("spatial_response_alignment", ""))
-            if "sensitivity_aligned" in alignment:
-                research_prediction = "favorable_spatial_profile"
-                predicted_effective_research_label = "Yes_research_spatial_alignment"
-            elif "resistance" in alignment or "barrier" in alignment:
-                research_prediction = "unfavorable_spatial_barrier_profile"
-                predicted_effective_research_label = "No_research_spatial_alignment"
+            if "higher_teacher_residual_aligned" in alignment:
+                research_prediction = "higher_teacher_residual_alignment"
+                alignment_direction_label = "higher_teacher_residual_association"
+            elif "lower_teacher_residual" in alignment or "barrier" in alignment:
+                research_prediction = "lower_teacher_residual_alignment"
+                alignment_direction_label = "lower_teacher_residual_association"
             else:
                 research_prediction = "indeterminate_spatial_profile"
-                predicted_effective_research_label = "Indeterminate"
+                alignment_direction_label = "indeterminate"
 
             rows.append({
                 "sample_id": sample_id,
                 "drug_key": drug_key,
-                "research_prediction_label": research_prediction,
-                "predicted_effective_research_label": predicted_effective_research_label,
-                "probability_effective_research_not_calibrated": d.get("spatial_favorable_score_0_1_not_calibrated", ""),
+                "treatment_label": drug_key,
+                "treatment_identity_definition": "case-level recorded-treatment profile; component timing and simultaneous administration are not established",
+                "spatial_alignment_summary": research_prediction,
+                "alignment_direction_label": alignment_direction_label,
+                "rescaled_alignment_score_0_1": d.get("rescaled_alignment_score_0_1_not_calibrated", ""),
+                "score_status": d.get("score_status", "UNKNOWN"),
+                "observed_effect_weight_fraction": d.get("observed_effect_weight_fraction", ""),
                 "spatial_alignment_score": d.get("transfer_alignment_score", ""),
                 "confidence_level": d.get("confidence_level", ""),
+                "confidence_definition": "heuristic_alignment_magnitude_and_feature_coverage_not_calibrated_accuracy",
+                "alignment_performance_status": "NOT_EVALUATED_FOR_THIS_EXACT_SCORING_RULE",
+                "source_estimator_validation_scope": d.get("source_estimator_validation_scope", "UNSPECIFIED_SOURCE_SCOPE"),
                 "feature_effect_coverage_fraction": d.get("feature_effect_coverage_fraction", ""),
                 "spatial_response_alignment": alignment,
                 "treatment_components": d.get("treatment_components", ""),
                 "component_classes": d.get("component_classes", ""),
                 "interpretation_tier": d.get("interpretation_tier", ""),
                 "label_shuffle_validation_status": d.get("label_shuffle_validation_status", ""),
-                "model_observed_test_pearson_mean": d.get("observed_test_pearson_mean", ""),
-                "model_observed_test_r2_mean": d.get("observed_test_r2_mean", ""),
-                "model_fdr_q_pearson": d.get("fdr_q_pearson", ""),
-                "top_sensitivity_features": pos_features,
-                "top_resistance_or_barrier_features": neg_features,
-                "dominant_sensitivity_themes": pos_themes,
-                "dominant_resistance_or_barrier_themes": neg_themes,
+                "source_base_estimator_test_pearson_mean": d.get("observed_test_pearson_mean", ""),
+                "source_base_estimator_test_r2_mean": d.get("observed_test_r2_mean", ""),
+                "source_base_estimator_fdr_q_pearson": d.get("fdr_q_pearson", ""),
+                "top_higher_teacher_residual_features": pos_features,
+                "top_lower_teacher_residual_features": neg_features,
+                "dominant_higher_teacher_residual_themes": pos_themes,
+                "dominant_lower_teacher_residual_themes": neg_themes,
                 "barrier_interpretation": barrier_text,
                 "explanation": explanation,
                 "research_use_caveat": "Research-use spatial transfer inference. Not a calibrated clinical drug-efficacy probability and not a treatment recommendation.",
@@ -273,7 +281,7 @@ def main() -> int:
             warnings.append(f"Excel write failed: {exc}")
 
         add_qc(qc, "prediction_table_rows", "pass" if len(table) > 0 else "fail", len(table), ">0", "Prediction interpretation table generated.")
-        add_qc(qc, "prediction_table_treatment_count", "pass" if table["drug_key"].nunique() == 27 else "warn", table["drug_key"].nunique() if not table.empty else 0, 27, "Expected 27 validated treatments.")
+        add_qc(qc, "prediction_table_treatment_count", "pass" if set(table["drug_key"]) == set(cards["drug_key"]) else "warn", table["drug_key"].nunique() if not table.empty else 0, cards["drug_key"].nunique(), "Expected selected PIM treatment cards.")
         add_qc(qc, "prediction_table_has_explanations", "pass" if table["explanation"].astype(str).str.len().gt(20).all() else "fail", int(table["explanation"].astype(str).str.len().gt(20).sum()) if not table.empty else 0, len(table), "Every prediction row should have a readable explanation.")
         add_qc(qc, "prediction_table_has_barrier_interpretations", "pass" if "barrier_interpretation" in table.columns else "fail", "barrier_interpretation" in table.columns, True, "Barrier interpretation column present.")
         add_qc(qc, "prediction_table_excel_exists", "pass" if xlsx_path.exists() else "warn", xlsx_path.exists(), True, "Excel version of prediction table created.")
@@ -320,7 +328,7 @@ def main() -> int:
         str(xlsx_path),
         "",
         "Prediction table note",
-        "The probability_effective_research_not_calibrated column is a monotonic spatial-alignment score transformed to 0-1 scale. It is not a calibrated clinical efficacy probability.",
+        "The rescaled_alignment_score_0_1 column is a monotonic spatial-alignment score transformed to 0-1 scale. It is not a calibrated clinical efficacy probability.",
         "",
         "QC checks",
         qc_df.to_string(index=False) if not qc_df.empty else "none",

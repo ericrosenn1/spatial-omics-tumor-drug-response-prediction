@@ -23,10 +23,9 @@ Scientific role:
 Documentation polish marker:
     TEACHER_BUILDER_STEP05_DOC_POLISH_V1
 
-Important:
-    This documentation pass is intentionally non-behavioral. Comments, section
-    headers, and docstrings may be added, but executable logic, paths, thresholds,
-    schemas, and outputs must remain unchanged.
+Correction contract:
+    Preserve teacher values and reject duplicate or missing sample identities
+    before joining the numeric spatial handoff.
 """
 
 
@@ -148,7 +147,14 @@ def main():
     # The model-input table is one row per spatial sample, with optional smoke-test truncation.
 
     # Keep one feature row per sample before joining to many treatment rows.
-    spatial = spatial.drop_duplicates(sample_col).copy()
+    if spatial[sample_col].isna().any() or spatial[sample_col].duplicated().any():
+        raise ValueError("Spatial feature handoff requires unique nonmissing sample identities")
+    if teacher.duplicated(["sample_id", "drug_key"]).any():
+        raise ValueError("Teacher handoff contains duplicate sample-treatment identities")
+    missing_samples = set(teacher["sample_id"].astype(str)) - set(spatial[sample_col].astype(str))
+    if missing_samples:
+        raise ValueError(f"Teacher samples absent from spatial handoff: {sorted(missing_samples)}")
+    spatial = spatial.copy()
 
     # Smoke-test mode limits both spatial rows and teacher rows consistently.
     if bool(cfg.get("test_mode", False)):
@@ -242,7 +248,7 @@ def main():
     # The prediction-ready training table joins every teacher row to the matching sample-level feature row.
 
     # Join each sample-treatment teacher label to the matching spatial feature vector.
-    training = teacher.merge(model_input, left_on="sample_id", right_on=sample_col, how="left", suffixes=("_teacher", ""))
+    training = teacher.merge(model_input, left_on="sample_id", right_on=sample_col, how="left", suffixes=("_teacher", ""), validate="many_to_one")
 
 
 

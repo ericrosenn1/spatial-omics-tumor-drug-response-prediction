@@ -166,6 +166,8 @@ teacher_builder/precomputed_governed_fused_teacher_table_102samples.tsv.gz
 
 This table contains governed fused sample-treatment teacher labels for the 102-sample analysis. It can be used to start downstream Visium-facing spatial prediction workflows without rerunning `model_training/` or the upstream teacher-builder fusion steps.
 
+This public gzip is the historical handoff and remains unchanged. Corrected results use the separately versioned `20260913_readonly_repackage_of_corrected_20260907` artifact identified by its local authority manifest. The [corrected entry point](spatial_prediction_model_V2/docs/corrected_evaluation_and_prediction.md) requires the recorded teacher, spatial-table and feature-manifest hashes together; matching `SAMPLE_*` identifiers alone does not establish corrected provenance.
+
 This is an intentional exception to the general generated-output exclusion policy. It is a compact derived handoff table, not raw expression data, raw histology data, whole-slide image data, h5ad data, or a trained model artifact.
 
 Users who want to reproduce the full upstream workflow can regenerate this table from `model_training/` and `teacher_builder`. Users who only want to run downstream spatial prediction, interpretation, or transfer workflows can use the precomputed handoff.

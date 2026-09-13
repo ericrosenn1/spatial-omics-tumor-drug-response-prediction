@@ -186,6 +186,7 @@ def main() -> int:
     parser.add_argument("--handoff-dir", required=True)
     parser.add_argument("--audit-dir", default="")
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--absence-evidence", default="", help="TSV with sample_id, feature, confirmed_absence, evidence_path; no values are zero-filled without explicit evidence")
     args = parser.parse_args()
 
     handoff_dir = Path(args.handoff_dir)
@@ -205,30 +206,20 @@ def main() -> int:
     long = read_table(long_path)
     audit = read_table(audit_path)
 
-    # Correct duplicates defensively.
-    priority = {
-        "observed_nonmissing_primary_table": 0,
-        "recovered_from_other_table": 1,
-        "biologically_absent_zero_filled": 2,
-        "biologically_absent_zero_like_candidate": 3,
-        "observed_column_but_missing_value": 4,
-        "unavailable": 5,
-    }
-    audit["_priority"] = audit["missingness_classification"].map(priority).fillna(9).astype(int)
-    audit = (
-        audit
-        .sort_values(["sample_id", "feature", "_priority"])
-        .drop_duplicates(["sample_id", "feature"], keep="first")
-        .drop(columns=["_priority"])
-        .reset_index(drop=True)
-    )
-
-    long = (
-        long
-        .sort_values(["sample_id", "feature"])
-        .drop_duplicates(["sample_id", "feature"], keep="first")
-        .reset_index(drop=True)
-    )
+    from _alignment_contract import require_unique
+    require_unique(model, ["sample_id"], "zero-fill input")
+    require_unique(audit, ["sample_id", "feature"], "missingness audit")
+    require_unique(long, ["sample_id", "feature"], "feature coverage")
+    evidence_by_key = {}
+    if args.absence_evidence:
+        evidence = read_table(Path(args.absence_evidence))
+        require_unique(evidence, ["sample_id", "feature"], "absence evidence")
+        for row in evidence.to_dict("records"):
+            confirmed = str(row.get("confirmed_absence", "")).lower() in ["true", "1", "yes"]
+            source = Path(str(row.get("evidence_path", "")))
+            if not confirmed or not source.is_file():
+                raise ValueError("Absence evidence must be confirmed and point to a readable source file")
+            evidence_by_key[(str(row["sample_id"]), str(row["feature"]))] = str(source.resolve())
 
     decision_rows = []
     fill_keys = set()
@@ -244,7 +235,11 @@ def main() -> int:
         reason = "feature_already_observed_or_recovered"
 
         if classification == "biologically_absent_zero_like_candidate":
-            fill, decision, reason = is_safe_zero_fill_feature(feature, category)
+            safe_kind, decision, reason = is_safe_zero_fill_feature(feature, category)
+            fill = safe_kind and (sample_id, feature) in evidence_by_key
+            if safe_kind and not fill:
+                decision = "keep_missing_neutral_z0"
+                reason = "name_heuristic_is_not_verified_biological_absence"
 
         elif classification in ["observed_column_but_missing_value", "unavailable"]:
             fill = False
@@ -263,6 +258,7 @@ def main() -> int:
             "recommended_fill": 0 if fill else "",
             "decision": decision,
             "reason": reason,
+            "absence_evidence_path": evidence_by_key.get((sample_id, feature), ""),
         })
 
     decisions = pd.DataFrame(decision_rows)
@@ -327,7 +323,7 @@ def main() -> int:
         sample_cov.to_string(index=False),
         "",
         "Policy",
-        "Only conservative absence-like count/fraction/component/hotspot/motif features were zero-filled.",
+        "Only conservative absence-like features with explicit confirmed sample-feature evidence were zero-filled.",
         "Continuous distance/slope/score/mean/median/q90-like features were not zero-filled.",
         "Observed values were never overwritten.",
         "",

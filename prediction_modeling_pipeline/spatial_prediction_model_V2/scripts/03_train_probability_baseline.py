@@ -22,11 +22,10 @@ Scientific role:
 Documentation polish marker:
     SPATIAL_PREDICTION_MODEL_V2_STEP03_DOC_POLISH_V1
 
-Important:
-    This documentation pass is intentionally non-behavioral. Comments, section
-    headers, and docstrings may be added, but executable logic, imports, constants,
-    hyperparameters, split logic, feature-selection rules, output filenames, and
-    return codes must remain unchanged.
+Reporting correction (2026-09-13):
+    Group gain totals now weight the conditional-on-selection mean by selection
+    frequency, so unselected fits contribute zero. Model fitting, split logic,
+    feature selection and historical saved outputs remain unchanged.
 """
 
 
@@ -59,6 +58,7 @@ if str(SRC_ROOT) not in sys.path:
 
 from spm_v2.io_utils import ensure_dir, read_table, write_json, write_table, write_text_report
 from spm_v2.model_training import make_xgb_pipeline, select_features_training_only
+from spm_v2.feature_gain_summary import summarize_normalized_gain
 from spm_v2.provenance import write_run_provenance
 from spm_v2.reporting import terminal_block, write_output_manifest
 from spm_v2.validation import metric_safe, summarize_repeated_split_metrics
@@ -306,18 +306,9 @@ def main() -> int:
 
     metric_summary = summarize_repeated_split_metrics(metrics, ["model_family", "target_col"])
 
-    total_gain = float(feature_evidence["mean_gain_importance"].sum()) if not feature_evidence.empty else 0.0
-    spatial_gain = float(feature_evidence.loc[feature_evidence["feature_type"].eq("spatial_candidate"), "mean_gain_importance"].sum()) if not feature_evidence.empty else 0.0
-    treatment_gain = float(feature_evidence.loc[feature_evidence["feature_type"].eq("treatment_identity"), "mean_gain_importance"].sum()) if not feature_evidence.empty else 0.0
-
-    # Report spatial-vs-treatment contribution so downstream interpretation is not based on accuracy alone.
-    contribution = pd.DataFrame([{
-        "model_family": "probability_baseline",
-        "spatial_gain_total": spatial_gain,
-        "treatment_identity_gain_total": treatment_gain,
-        "spatial_feature_fraction": spatial_gain / total_gain if total_gain > 0 else np.nan,
-        "treatment_identity_fraction": treatment_gain / total_gain if total_gain > 0 else np.nan,
-    }])
+    # Restore zero contribution in repeats where a feature was not selected.
+    contribution = pd.DataFrame([summarize_normalized_gain(
+        feature_evidence, args.n_repeats, "probability_baseline")])
 
     write_table(pd.DataFrame({
         "source_name": ["pair_dataset", "broad_feature_manifest"],

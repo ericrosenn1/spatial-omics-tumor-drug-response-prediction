@@ -6,7 +6,7 @@ Script:
 Description:
     Builds sample-treatment spatial interpretation scores by applying signed
     treatment feature effects to sample spatial feature profiles. Scores describe
-    sensitivity-aligned versus resistance-aligned spatial biology.
+    aligned with higher teacher residual versus aligned with lower teacher residual spatial biology.
 
 Instructions:
     Run after Step 04. Interpret coverage through validated-treatment pair rows:
@@ -43,6 +43,8 @@ from typing import Dict, List
 
 import numpy as np
 import pandas as pd
+
+from _pim_utils import source_counts, require_unique
 
 from _pim_utils import (
     add_qc,
@@ -115,6 +117,7 @@ def read_pair_minimal(index_df: pd.DataFrame, target_col: str) -> pd.DataFrame:
         pair = pair.rename(columns={sample_col: "sample_id"})
     if treatment_col != "drug_key":
         pair = pair.rename(columns={treatment_col: "drug_key"})
+    require_unique(pair, ["sample_id", "drug_key"], "teacher residual pairs")
 
     return pair
 
@@ -127,7 +130,11 @@ def load_spatial_z(index_df: pd.DataFrame, features: List[str]) -> pd.DataFrame:
     sample_col = choose_col(spatial.columns, ["sample_id", "slide_id", "sample"], required=True, label="spatial sample column")
     if sample_col != "sample_id":
         spatial = spatial.rename(columns={sample_col: "sample_id"})
-    present = [f for f in features if f in spatial.columns]
+    require_unique(spatial, ["sample_id"], "spatial reference")
+    missing = sorted(set(features) - set(spatial.columns))
+    if missing:
+        raise ValueError(f"Spatial reference lacks required feature columns: {missing}")
+    present = list(features)
     spatial = spatial[["sample_id"] + present].copy()
     spatial_z = zscore_frame(spatial, present)
     return spatial_z
@@ -142,12 +149,12 @@ def driver_text(rows: pd.DataFrame, direction: str, n: int) -> str:
     if direction == "positive":
         part = rows[pd.to_numeric(rows["contribution"], errors="coerce") > 0].copy()
         part = part.sort_values("contribution", ascending=False).head(n)
-        label = "supports sensitivity-aligned score"
+        label = "supports aligned with higher teacher residual score"
     else:
         part = rows[pd.to_numeric(rows["contribution"], errors="coerce") < 0].copy()
         part["abs_contribution"] = pd.to_numeric(part["contribution"], errors="coerce").abs()
         part = part.sort_values("abs_contribution", ascending=False).head(n)
-        label = "supports resistance-aligned score"
+        label = "supports aligned with lower teacher residual score"
 
     pieces = []
     for _, row in part.iterrows():
@@ -170,6 +177,9 @@ def build_scores_for_treatment(
         return pd.DataFrame(), pd.DataFrame()
 
     effects = effects.copy()
+    require_unique(effects, ["feature_name"], "signed effects for one profile")
+    require_unique(pair_sub, ["sample_id", "drug_key"], "profile pairs")
+    require_unique(spatial_z, ["sample_id"], "spatial reference")
     effects["effect_weight"] = pd.to_numeric(effects["effect_weight"], errors="coerce").fillna(0.0)
     effects = effects.sort_values("effect_weight", ascending=False)
 
@@ -180,15 +190,22 @@ def build_scores_for_treatment(
     data = pair_sub.merge(spatial_z[["sample_id"] + features], on="sample_id", how="left")
     weights = effects.set_index("feature_name")["signed_effect"].astype(float).reindex(features).fillna(0.0)
     denominator = float(weights.abs().sum())
+    has_effect_weight = np.isfinite(denominator) and denominator > 0
     if not np.isfinite(denominator) or denominator <= 0:
         denominator = 1.0
 
+    observed = data[features].apply(pd.to_numeric, errors="coerce").notna()
+    coverage = observed.mul(weights.abs(), axis=1).sum(axis=1) / denominator
+    supported = coverage.gt(0) & has_effect_weight
     X = data[features].apply(pd.to_numeric, errors="coerce").fillna(0.0)
     contrib = X.mul(weights, axis=1)
 
     net = contrib.sum(axis=1) / denominator
     sens = contrib.clip(lower=0.0).sum(axis=1) / denominator
     resist = (-contrib.clip(upper=0.0)).sum(axis=1) / denominator
+    net = net.where(supported)
+    sens = sens.where(supported)
+    resist = resist.where(supported)
 
     score_rows: List[dict] = []
     contribution_rows: List[dict] = []
@@ -212,6 +229,7 @@ def build_scores_for_treatment(
         cdf = pd.DataFrame({
             "feature_name": features,
             "sample_spatial_zscore": X.loc[idx, features].values,
+            "feature_observed": observed.loc[idx, features].values,
             "signed_effect": weights.values,
             "contribution": row_contrib.values,
         })
@@ -222,7 +240,7 @@ def build_scores_for_treatment(
             abs_contribution=lambda d: pd.to_numeric(d["contribution"], errors="coerce").abs()
         ).sort_values("abs_contribution", ascending=False).head(top_n_driver_features)
 
-        for contribution_direction, part in [("sensitivity_supporting", top_pos), ("resistance_supporting", top_neg)]:
+        for contribution_direction, part in [("higher_teacher_residual_supporting", top_pos), ("lower_teacher_residual_supporting", top_neg)]:
             for rank, crow in enumerate(part.to_dict("records"), start=1):
                 contribution_rows.append({
                     "sample_id": sample_id,
@@ -233,10 +251,12 @@ def build_scores_for_treatment(
                 })
 
         net_score = float(net.loc[idx])
-        if net_score > 0:
-            label = "spatial_profile_sensitivity_aligned"
+        if not np.isfinite(net_score):
+            label = "spatial_profile_unscored_insufficient_observed_effects"
+        elif net_score > 0:
+            label = "spatial_profile_higher_teacher_residual_aligned"
         elif net_score < 0:
-            label = "spatial_profile_resistance_aligned"
+            label = "spatial_profile_lower_teacher_residual_aligned"
         else:
             label = "spatial_profile_balanced_or_ambiguous"
 
@@ -255,17 +275,22 @@ def build_scores_for_treatment(
             "sample_id": sample_id,
             "drug_key": drug_key,
             "n_features_used": len(features),
+            "n_features_observed": int(observed.loc[idx].sum()),
+            "observed_effect_weight_fraction": float(coverage.loc[idx]) if has_effect_weight else np.nan,
+            "score_status": ("SUPPORTED_COMPLETE_COVERAGE" if coverage.loc[idx] >= 1 - 1e-12 else "SUPPORTED_PARTIAL_COVERAGE") if supported.loc[idx] else ("UNSUPPORTED_ZERO_EFFECT_WEIGHT" if not has_effect_weight else "UNSUPPORTED_NO_OBSERVED_EFFECT_WEIGHT"),
+            "alignment_performance_status": "NOT_EVALUATED_FOR_THIS_EXACT_SCORING_RULE",
+            "source_estimator_validation_scope": "CONDITIONAL_DEVELOPMENT_FIXED_REGISTRY_SELECTED_FAMILY",
             "net_signed_spatial_interpretation_score": net_score,
-            "sensitivity_alignment_score": float(sens.loc[idx]),
-            "resistance_alignment_score": float(resist.loc[idx]),
+            "higher_teacher_residual_alignment_score": float(sens.loc[idx]),
+            "lower_teacher_residual_alignment_score": float(resist.loc[idx]),
             "sample_spatial_alignment_label": label,
             target_col: target_value,
             "observed_residual_label": observed_label,
             "fused_prob_responder": row.get("fused_prob_responder", np.nan),
             "treatment_prior": row.get("treatment_prior", row.get("prior_prob_responder", np.nan)),
             "fused_confidence": row.get("fused_confidence", np.nan),
-            "top_sensitivity_supporting_features": driver_text(top_pos, "positive", top_n_driver_features),
-            "top_resistance_supporting_features": driver_text(top_neg, "negative", top_n_driver_features),
+            "top_higher_teacher_residual_supporting_features": driver_text(top_pos, "positive", top_n_driver_features),
+            "top_lower_teacher_residual_supporting_features": driver_text(top_neg, "negative", top_n_driver_features),
             "interpretation_caveat": "Spatial alignment score is an interpretation of signed model associations, not a treatment recommendation.",
         })
 
@@ -284,6 +309,7 @@ def main() -> int:
     args = parse_args()
     started = dt.datetime.now()
     output_root = Path(args.output_root)
+    expected = source_counts(output_root)
 
     prepared_root, index_df = load_prepared_index(output_root, Path(args.prepared_input_root) if args.prepared_input_root else None)
 
@@ -317,6 +343,8 @@ def main() -> int:
     qc: List[dict] = []
 
     try:
+        require_unique(cards, ["drug_key"], "treatment cards")
+        require_unique(effects, ["drug_key", "feature_name"], "signed feature effects")
         valid_drugs = sorted(cards["drug_key"].dropna().astype(str).unique())
         effects = effects[effects["drug_key"].astype(str).isin(valid_drugs)].copy()
 
@@ -356,15 +384,15 @@ def main() -> int:
         contribution_df = pd.concat(contribution_parts, ignore_index=True) if contribution_parts else pd.DataFrame()
 
         if not score_df.empty:
-            score_df["rank_within_treatment_sensitivity_alignment"] = (
+            score_df["rank_within_treatment_higher_teacher_residual_alignment"] = (
                 score_df.groupby("drug_key")["net_signed_spatial_interpretation_score"]
                 .rank(method="first", ascending=False)
-                .astype(int)
+                .astype("Int64")
             )
-            score_df["rank_within_treatment_resistance_alignment"] = (
+            score_df["rank_within_treatment_lower_teacher_residual_alignment"] = (
                 score_df.groupby("drug_key")["net_signed_spatial_interpretation_score"]
                 .rank(method="first", ascending=True)
-                .astype(int)
+                .astype("Int64")
             )
 
             card_keep = [c for c in [
@@ -390,10 +418,10 @@ def main() -> int:
                     n_validated_treatments_scored=("drug_key", "nunique"),
                     mean_net_signed_spatial_score=("net_signed_spatial_interpretation_score", "mean"),
                     median_net_signed_spatial_score=("net_signed_spatial_interpretation_score", "median"),
-                    max_sensitivity_alignment_score=("sensitivity_alignment_score", "max"),
-                    max_resistance_alignment_score=("resistance_alignment_score", "max"),
-                    strongest_sensitivity_aligned_treatment=("drug_key", lambda s: score_df.loc[s.index].sort_values("net_signed_spatial_interpretation_score", ascending=False)["drug_key"].iloc[0]),
-                    strongest_resistance_aligned_treatment=("drug_key", lambda s: score_df.loc[s.index].sort_values("net_signed_spatial_interpretation_score", ascending=True)["drug_key"].iloc[0]),
+                    max_higher_teacher_residual_alignment_score=("higher_teacher_residual_alignment_score", "max"),
+                    max_lower_teacher_residual_alignment_score=("lower_teacher_residual_alignment_score", "max"),
+                    highest_signed_alignment_treatment=("drug_key", lambda s: score_df.loc[s.index].sort_values("net_signed_spatial_interpretation_score", ascending=False)["drug_key"].iloc[0]),
+                    lowest_signed_alignment_treatment=("drug_key", lambda s: score_df.loc[s.index].sort_values("net_signed_spatial_interpretation_score", ascending=True)["drug_key"].iloc[0]),
                 )
             )
             sample_summary["interpretation_caveat"] = "Sample summary ranks spatial alignment patterns only; it is not a treatment recommendation."
@@ -401,9 +429,9 @@ def main() -> int:
             ranking_rows: List[pd.DataFrame] = []
             for drug_key, sub in score_df.groupby("drug_key"):
                 top_sens = sub.sort_values("net_signed_spatial_interpretation_score", ascending=False).head(10).copy()
-                top_sens["ranking_direction"] = "most_sensitivity_aligned_spatial_profiles"
+                top_sens["ranking_direction"] = "highest_signed_alignment_spatial_profiles"
                 top_res = sub.sort_values("net_signed_spatial_interpretation_score", ascending=True).head(10).copy()
-                top_res["ranking_direction"] = "most_resistance_aligned_spatial_profiles"
+                top_res["ranking_direction"] = "lowest_signed_alignment_spatial_profiles"
                 ranking_rows.extend([top_sens, top_res])
             ranking_df = pd.concat(ranking_rows, ignore_index=True) if ranking_rows else pd.DataFrame()
 
@@ -414,9 +442,9 @@ def main() -> int:
         write_tsv(sample_dir / "sample_interpretation_summary.tsv", sample_summary)
         write_tsv(ranking_dir / "treatment_sample_interpretation_rankings.tsv", ranking_df)
 
-        add_qc(qc, "validated_treatments_scored", "pass" if score_df.get("drug_key", pd.Series(dtype=str)).nunique() == 27 else "warn", score_df.get("drug_key", pd.Series(dtype=str)).nunique(), 27, "Expected sample-level scores for 27 validated treatments.")
+        add_qc(qc, "validated_treatments_scored", "pass" if score_df.get("drug_key", pd.Series(dtype=str)).nunique() == expected["validated_treatments"] else "warn", score_df.get("drug_key", pd.Series(dtype=str)).nunique(), expected["validated_treatments"], "Expected sample-level scores for the source-selected treatments.")
         add_qc(qc, "sample_treatment_score_rows", "pass" if len(score_df) > 0 else "fail", len(score_df), ">0", "Sample-treatment interpretation score rows generated.")
-        add_qc(qc, "unique_samples_scored", "pass" if score_df.get("sample_id", pd.Series(dtype=str)).nunique() == 102 else "warn", score_df.get("sample_id", pd.Series(dtype=str)).nunique(), 102, "Expected scoring coverage across available samples.")
+        add_qc(qc, "unique_samples_scored", "pass" if score_df.get("sample_id", pd.Series(dtype=str)).nunique() == pair["sample_id"].nunique() else "warn", score_df.get("sample_id", pd.Series(dtype=str)).nunique(), pair["sample_id"].nunique(), "Expected scoring coverage across available samples.")
         add_qc(qc, "feature_contribution_rows", "pass" if len(contribution_df) > 0 else "fail", len(contribution_df), ">0", "Top driver feature contributions generated.")
         add_qc(qc, "sample_summary_rows", "pass" if len(sample_summary) > 0 else "fail", len(sample_summary), ">0", "Sample-level summary generated.")
         add_qc(qc, "ranking_rows", "pass" if len(ranking_df) > 0 else "fail", len(ranking_df), ">0", "Treatment-specific sample rankings generated.")
@@ -466,8 +494,8 @@ def main() -> int:
         f"elapsed_seconds: {(finished - started).total_seconds():.2f}",
         "",
         "Interpretation rule",
-        "A positive net signed spatial interpretation score means the sample's feature profile aligns with sensitivity-associated residual biology for that treatment.",
-        "A negative score means the sample's feature profile aligns with resistance-associated residual biology for that treatment.",
+        "A positive net signed spatial interpretation score means the sample's feature profile aligns with associated with higher teacher residual residual biology for that treatment.",
+        "A negative score means the sample's feature profile aligns with associated with lower teacher residual residual biology for that treatment.",
         "",
         "Outputs",
         f"sample_treatment_scores: {scores_dir / 'sample_treatment_signed_interpretation_scores.tsv'}",

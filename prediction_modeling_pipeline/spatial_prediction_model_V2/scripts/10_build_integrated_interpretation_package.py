@@ -19,11 +19,9 @@ Scientific role:
 Documentation polish marker:
     SPATIAL_PREDICTION_MODEL_V2_STEP10_DOC_POLISH_V1
 
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic,
-    imports, constants, thresholds, hyperparameters, validation rules,
-    output filenames, and return codes must remain unchanged.
+Reporting corrections:
+    Matched normalized-gain summaries are reconstructed from saved feature
+    evidence. Original fitting, selection and validation rules are unchanged.
 """
 
 
@@ -43,6 +41,9 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from spm_v2.feature_gain_summary import summarize_normalized_gain
 
 
 # =============================================================================
@@ -1069,6 +1070,18 @@ def maybe_open(path: Path):
 # Main workflow
 # =============================================================================
 
+def validated_only(results: pd.DataFrame) -> pd.DataFrame:
+    """Keep the actual accepted set, including an explicitly empty result."""
+    if results.empty:
+        return results.copy()
+    if "validated_for_step10" not in results:
+        raise ValueError("Step 09 results lack an explicit validation decision")
+    if "drug_key" in results and results["drug_key"].duplicated().any():
+        raise ValueError("Duplicate Step 09 treatment identities")
+    keep = results["validated_for_step10"].astype(str).str.lower().isin(["true", "1", "yes"])
+    return results.loc[keep].copy()
+
+
 def main() -> int:
     """Run this spatial_prediction_model_V2 step and write tables, reports, provenance, and summaries."""
 
@@ -1211,19 +1224,47 @@ def main() -> int:
         ["*spatial_feature_evidence*.tsv", "*feature_evidence*.tsv"],
     )
 
+    # Compare the same gain quantity in probability and residual branches.
+    # The historic Step03 aggregate omitted nonselected-fit zeros; Step04's
+    # original contribution table uses SHAP. Preserve those source tables and
+    # expose a separately defined matched gain comparison, without fitting.
+    gain_rows = []
+    gain_sources = []
+    for step_key, branch, evidence_path in [
+        ("step03", "probability_baseline", step03 / "03_feature_evidence" / "probability_baseline_feature_evidence_summary.tsv"),
+        ("step04", "pair_level_prior_adjusted_residual", step04 / "03_feature_evidence_for_step05" / "pair_level_residual_feature_evidence_summary.tsv"),
+    ]:
+        evidence = read_table(evidence_path)
+        metrics = tables[step_key + "_metric_summary"]
+        repeats = pd.to_numeric(metrics["n_repeats"], errors="raise").unique()
+        if len(repeats) != 1:
+            raise ValueError("Matched gain needs a unique recorded repeated-fit count")
+        row = summarize_normalized_gain(evidence, repeats[0], branch)
+        gain_rows.append(row)
+        gain_sources.append({"model_family": branch, "source_evidence": str(evidence_path),
+                             "sha256": hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
+                             "original_contribution_definition": "conditional-on-selection mean gain sums" if step_key == "step03" else "mean_abs_shap allocation",
+                             "original_contribution_table_preserved": True})
+        tables[step_key + "_contribution"] = pd.DataFrame([row])
+    matched_gain = pd.DataFrame(gain_rows)
+    write_table(matched_gain, d02 / "matched_normalized_gain_comparison.tsv")
+    write_table(pd.DataFrame(gain_sources), d02 / "matched_normalized_gain_sources.tsv")
+
     summaries = enrich_step10_reporting_summaries(summaries, tables)
 
     model_comparison = build_model_comparison(summaries, tables, paths)
+    gain_index = matched_gain.set_index("model_family")
+    for column in ["spatial_feature_fraction", "treatment_identity_fraction", "score_col", "aggregation_definition"]:
+        model_comparison["matched_gain_" + column] = model_comparison.model_branch.map(gain_index[column])
 
-    # Use Step 09 validated treatments when available, falling back to all validation results for transparent reporting.
-    validated_treatments = tables["step09_validated_treatments"].copy()
-    if validated_treatments.empty:
-        validated_treatments = tables["step09_validation_results"].copy()
+    # A complete negative result is an empty accepted set, never all candidates.
+    validated_treatments = validated_only(tables["step09_validation_results"])
+    validated_treatments["evaluation_scope"] = "conditional_development_fixed_registry_and_selected_candidates"
 
     if not validated_treatments.empty:
         validated_treatments["integrated_interpretation_status"] = np.where(
             validated_treatments.get("validated_for_step10", False).astype(str).str.lower().isin(["true", "1", "yes"]),
-            "label_shuffle_validated",
+            "conditional_label_shuffle_validated",
             validated_treatments.get("label_shuffle_validation_status", "not_label_shuffle_validated"),
         )
 
@@ -1336,8 +1377,10 @@ def main() -> int:
         master_lines.append(f"{key}: {step09_summary.get(key, '')}")
     master_lines.append("")
     master_lines.append("Interpretation")
-    master_lines.append("The integrated package consolidates the V2 smoke results from probability baseline, prior-adjusted residual modeling, strict biology registry generation, broad residual modeling, per-treatment residual modeling, curation, and label-shuffle validation.")
-    master_lines.append("The validated treatment table is the strongest current treatment-specific spatial biology result table.")
+    master_lines.append("The integrated package consolidates the V2 development results from probability baseline, prior-adjusted residual modeling, strict biology registry generation, broad residual modeling, per-treatment residual modeling, curation, and conditional label-shuffle validation.")
+    master_lines.append("The accepted treatment table reports a conditional test using a globally developed registry and selected candidate set. Independent grouped evaluation is reported separately and supplies any independently supported model set.")
+    master_lines.append("Probability and residual feature-importance allocations are compared using the same normalized gain definition, weighted by feature selection frequency across all recorded fits. The separate original residual SHAP allocation is a different quantity. Neither importance allocation is explained variance or independent predictive performance.")
+    master_lines.append(matched_gain[["model_family", "spatial_feature_fraction", "treatment_identity_fraction", "score_col"]].to_string(index=False))
     master_lines.append("The recurrent feature and biology theme tables summarize spatial mechanisms recurring across model branches.")
     master_lines.append("")
     master_lines.append("Caveat")
@@ -1355,6 +1398,8 @@ def main() -> int:
         "n_recurrent_spatial_feature_rows": int(len(recurrent_features)),
         "n_recurrent_biology_theme_rows": int(len(recurrent_themes)),
         "n_figures": int(len(figure_manifest)),
+        "matched_gain_comparison": str(d02 / "matched_normalized_gain_comparison.tsv"),
+        "gain_reporting_correction": "Selection-frequency-weighted normalized gain in both branches; original Step03/04 contribution tables preserved; no model refitting",
         "n_documentation_artifacts": int(len(documentation_artifacts)) if "documentation_artifacts" in locals() else 0,
         "source_steps_included": [k for k, v in summaries.items() if v],
         "production_dependency_on_v1_outputs": "no",

@@ -44,6 +44,8 @@ from typing import Dict, List, Sequence
 import numpy as np
 import pandas as pd
 
+from _pim_utils import source_counts, require_unique
+
 from _pim_utils import (
     add_qc,
     choose_col,
@@ -109,6 +111,7 @@ def read_pair_minimal(index_df: pd.DataFrame, target_col: str) -> tuple[pd.DataF
     if treatment_col != "drug_key":
         pair = pair.rename(columns={treatment_col: "drug_key"})
         treatment_col = "drug_key"
+    require_unique(pair, ["sample_id", "drug_key"], "teacher residual pairs")
     return pair, sample_col, treatment_col, target_col
 
 
@@ -121,7 +124,11 @@ def load_spatial_features(index_df: pd.DataFrame, feature_names: Sequence[str]) 
     if sample_col != "sample_id":
         spatial = spatial.rename(columns={sample_col: "sample_id"})
 
-    features = [f for f in feature_names if f in spatial.columns]
+    require_unique(spatial, ["sample_id"], "spatial reference")
+    missing = sorted(set(feature_names) - set(spatial.columns))
+    if missing:
+        raise ValueError(f"Spatial reference lacks required feature columns: {missing}")
+    features = list(feature_names)
     keep = ["sample_id"] + features
     return spatial[keep].copy(), features
 
@@ -164,7 +171,10 @@ def compute_treatment_feature_effects(
         "interpretation_class",
         "interpretation_note",
     ]
-    meta = feature_dict[[c for c in feature_meta_cols if c in feature_dict.columns]].drop_duplicates("feature_name")
+    require_unique(feature_dict, ["feature_name"], "feature dictionary")
+    require_unique(shap_df, ["drug_key", "feature_name"], "final feature evidence")
+    require_unique(merged, ["sample_id", "drug_key"], "joined teacher/spatial pairs")
+    meta = feature_dict[[c for c in feature_meta_cols if c in feature_dict.columns]]
 
     shap_df = normalize_importance_by_treatment(shap_df)
     shap_df = shap_df.merge(meta, on="feature_name", how="left", suffixes=("", "_dictionary"))
@@ -233,7 +243,7 @@ def compute_theme_effects(feature_effects: pd.DataFrame) -> pd.DataFrame:
         abs_sum = float(pd.to_numeric(sub["effect_weight"], errors="coerce").sum())
         pos_count = int((pd.to_numeric(sub["signed_effect"], errors="coerce") > 0).sum())
         neg_count = int((pd.to_numeric(sub["signed_effect"], errors="coerce") < 0).sum())
-        dominant = "sensitivity_associated" if signed_sum > 0 else ("resistance_associated" if signed_sum < 0 else "balanced_or_ambiguous")
+        dominant = "higher_teacher_residual_association" if signed_sum > 0 else ("lower_teacher_residual_association" if signed_sum < 0 else "balanced_or_ambiguous")
 
         rows.append({
             "drug_key": drug_key,
@@ -360,6 +370,7 @@ def main() -> int:
     args = parse_args()
     started = dt.datetime.now()
     output_root = Path(args.output_root)
+    expected = source_counts(output_root)
     prepared_root, index_df = load_prepared_index(output_root, Path(args.prepared_input_root) if args.prepared_input_root else None)
 
     step02_root = output_root / "02_feature_and_treatment_dictionary"
@@ -441,10 +452,10 @@ def main() -> int:
         else:
             write_tsv(matrix_dir / "treatment_theme_signed_effect_matrix.tsv", pd.DataFrame())
 
-        add_qc(qc, "validated_treatments_for_signed_effects", "pass" if len(validated_keys) == 27 else "warn", len(validated_keys), 27, "Validated treatments used for signed interpretation.")
+        add_qc(qc, "validated_treatments_for_signed_effects", "pass" if len(validated_keys) == expected["validated_treatments"] else "warn", len(validated_keys), expected["validated_treatments"], "Validated treatments used for signed interpretation.")
         add_qc(qc, "treatment_feature_effect_rows", "pass" if len(treatment_feature_effects) > 0 else "fail", len(treatment_feature_effects), ">0", "Signed per-treatment feature effects generated.")
         add_qc(qc, "treatment_theme_effect_rows", "pass" if len(treatment_theme_effects) > 0 else "fail", len(treatment_theme_effects), ">0", "Signed per-treatment theme effects generated.")
-        add_qc(qc, "spatial_features_available_for_signing", "pass" if len(present_features) >= 139 else "warn", len(present_features), ">=139", "Strict spatial features available in V2 spatial feature table.")
+        add_qc(qc, "spatial_features_available_for_signing", "pass" if len(present_features) >= expected["strict_biology_features"] else "warn", len(present_features), expected["strict_biology_features"], "Strict spatial features available in V2 spatial feature table.")
         add_qc(qc, "pair_rows_used_for_validated_treatments", "pass" if len(pair) > 0 else "fail", len(pair), ">0", "Pair-level residual rows used for directionality.")
         add_qc(qc, "broad_feature_effect_rows", "pass" if len(broad_feature_effects) > 0 else "warn", len(broad_feature_effects), ">0", "Broad sample-level signed effects generated from Step 06 predictions.")
 

@@ -202,6 +202,8 @@ def run_step(
     output_root: Path,
     open_output: bool,
     logs_root: Path,
+    spatial_feature_override: str = "",
+    spatial_feature_override_sha256: str = "",
 ) -> dict:
     """Run one pipeline step as a subprocess.
     Captures stdout, stderr, return code, elapsed time, and status metadata."""
@@ -228,6 +230,9 @@ def run_step(
         str(output_root),
     ]
 
+    if step == "01" and spatial_feature_override:
+        cmd.extend(["--spatial-feature-override", spatial_feature_override,
+                    "--spatial-feature-override-sha256", spatial_feature_override_sha256])
     if open_output:
 
         cmd.append("--open-output")
@@ -280,6 +285,8 @@ def parse_args() -> argparse.Namespace:
     Defaults preserve local project paths while allowing explicit overrides."""
     # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     parser = argparse.ArgumentParser()
+    parser.add_argument("--spatial-feature-override", default="")
+    parser.add_argument("--spatial-feature-override-sha256", default="")
 
     parser.add_argument(
         "--project-root",
@@ -364,6 +371,8 @@ def main() -> int:
                 output_root=output_root,
                 open_output=args.open_output,
                 logs_root=logs_root,
+                spatial_feature_override=args.spatial_feature_override,
+                spatial_feature_override_sha256=args.spatial_feature_override_sha256,
             )
             step_rows.append(step_row)
 
@@ -385,6 +394,8 @@ def main() -> int:
         "project_root": str(project_root),
         "model_root": str(model_root),
         "v2_run_root": str(v2_run_root),
+        "spatial_feature_override": args.spatial_feature_override,
+        "spatial_feature_override_sha256": args.spatial_feature_override_sha256,
         "output_root": str(output_root),
         "requested_steps": requested_steps,
         "started": started.isoformat(timespec="seconds"),

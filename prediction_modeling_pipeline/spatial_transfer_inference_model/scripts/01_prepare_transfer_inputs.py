@@ -148,7 +148,7 @@ def standardize_feature_input(path: Path, sample_id: str, strict_features: List[
         if len(df) == 1:
             df.insert(0, "sample_id", sample_id if sample_id else "TRANSFER_SAMPLE_001")
         else:
-            df.insert(0, "sample_id", [f"TRANSFER_SAMPLE_{i:04d}" for i in range(len(df))])
+            raise ValueError("Multi-sample transfer input requires explicit sample identities")
     elif sample_col != "sample_id":
         df = df.rename(columns={sample_col: "sample_id"})
 
@@ -159,18 +159,8 @@ def standardize_feature_input(path: Path, sample_id: str, strict_features: List[
     if sample_id and sample_id in set(df["sample_id"].astype(str)):
         df = df[df["sample_id"].astype(str) == str(sample_id)].copy()
 
-    # Drop accidental duplicate sample rows, keeping first complete row.
-    feature_cols = [c for c in df.columns if c in strict_features]
-    if feature_cols:
-        df["_transfer_nonmissing_strict_count"] = df[feature_cols].notna().sum(axis=1)
-        df = (
-            df.sort_values(["sample_id", "_transfer_nonmissing_strict_count"], ascending=[True, False])
-              .drop_duplicates("sample_id", keep="first")
-              .drop(columns=["_transfer_nonmissing_strict_count"])
-              .reset_index(drop=True)
-        )
-    else:
-        df = df.drop_duplicates("sample_id", keep="first").reset_index(drop=True)
+    from _alignment_contract import require_unique
+    require_unique(df, ["sample_id"], "transfer input")
 
     return df
 
@@ -295,9 +285,9 @@ def main() -> int:
         write_tsv(manifest_dir / "transfer_input_manifest.tsv", input_manifest)
 
         add_qc(qc, "pim_run_root_exists", "pass" if pim_run_root.exists() else "fail", pim_run_root.exists(), True, "Completed prediction_interpretation_model run root must exist.")
-        add_qc(qc, "strict_feature_registry_loaded", "pass" if len(strict_features) == 139 else "warn", len(strict_features), 139, "PIM strict feature registry loaded.")
+        add_qc(qc, "strict_feature_registry_loaded", "pass" if len(strict_features) == len(feature_dict) else "warn", len(strict_features), len(feature_dict), "PIM strict feature registry loaded.")
         add_qc(qc, "transfer_feature_input_rows", "pass" if len(single_df) >= 1 else "fail", len(single_df), ">=1", "Transfer feature input should have at least one sample row.")
-        add_qc(qc, "strict_feature_overlap_count", "pass" if len(overlap) >= 100 else ("warn" if len(overlap) >= 50 else "fail"), len(overlap), ">=100 preferred", "Overlap between transfer input and PIM strict features.")
+        add_qc(qc, "strict_feature_overlap_count", "pass" if set(overlap) == set(strict_features) else "fail", len(overlap), len(strict_features), "Overlap between transfer input and PIM strict features.")
         add_qc(qc, "input_mode_recorded", "pass", input_mode, "recorded", "Input mode selected by Step 01.")
 
         if missing:

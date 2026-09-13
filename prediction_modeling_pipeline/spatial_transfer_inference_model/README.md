@@ -4,9 +4,9 @@
 
 `spatial_transfer_inference_model` applies a completed spatial treatment-response interpretation atlas to new Visium spatial transcriptomics samples.
 
-The module takes a transfer-ready spatial feature table, aligns each sample to a frozen strict-feature registry, and scores how strongly each sample's spatial architecture aligns with treatment-associated sensitivity or resistance/barrier biology. It can run on a single Visium sample or on a small batch of samples.
+The module takes a transfer-ready spatial feature table, aligns each sample to a frozen strict-feature registry, and scores how strongly each sample's spatial architecture aligns with signed feature effects associated with higher or lower teacher residuals. It can run on a single Visium sample or on a small batch of samples.
 
-The main output is a sample-by-treatment interpretation table with spatial alignment scores, research-use probability-like scores, confidence/evidence support labels, feature drivers, biological theme drivers, QC reports, and a final local output package.
+The main output is a sample-by-treatment interpretation table with spatial alignment scores, rescaled interpretation scores, confidence/evidence support labels, feature drivers, biological theme drivers, QC reports, and a final local output package.
 
 The outputs are intended for biological interpretation and hypothesis generation. They are not clinical treatment recommendations.
 
@@ -14,8 +14,8 @@ The outputs are intended for biological interpretation and hypothesis generation
 
 This module is useful for questions such as:
 
-- Which treatment signatures show the strongest favorable spatial alignment for a given Visium sample?
-- Which samples show stronger resistance- or barrier-associated spatial programs?
+- Which treatment signatures show the highest signed spatial alignment for a given Visium sample?
+- Which samples show stronger alignment with lower teacher residuals?
 - Which spatial features drive each treatment-specific score?
 - Which biological themes recur across treatment signatures?
 - How do multiple Visium samples compare across the same frozen treatment atlas?
@@ -77,7 +77,7 @@ Aligns each input sample to the frozen strict spatial feature set. It records ob
 
 ### `03_score_transfer_drug_response_alignment.py`
 
-Combines sample feature values with signed treatment-feature effects. It produces treatment-specific spatial alignment scores, sensitivity-supporting scores, resistance/barrier-supporting scores, feature contributions, and theme contributions.
+Combines sample feature values with signed treatment-feature effects. It produces treatment-specific spatial alignment scores, higher-residual-supporting contributions, lower-residual-supporting contributions, feature contributions, and theme contributions.
 
 ### `04_make_single_slide_prediction_table.py`
 
@@ -124,20 +124,8 @@ SAMPLE_B,0.08,0.20,1.10
 
 ### Frozen interpretation atlas
 
-The module also requires a completed prediction interpretation model output folder containing the frozen interpretation atlas. The tracked file `configs/resolved_pim_transfer_file_map.example.json` is a GitHub-safe template. For local runs that use the resolved PIM file map, copy it to the runtime filename expected by the helper code and edit paths there:
+The module requires an explicitly selected completed prediction interpretation model run. The `--pim-run-root` argument binds every atlas table to that run. A module-global resolved file map is never consulted. Missing or duplicate atlas keys fail; another run is not substituted.
 
-```powershell
-Copy-Item .\configs\resolved_pim_transfer_file_map.example.json .\configs\resolved_pim_transfer_file_map.json
-```
-
-`configs/resolved_pim_transfer_file_map.json` is local and machine-specific; keep it uncommitted.
-
-Typical required resources include:
-- strict feature registry;
-- signed treatment-feature effects;
-- signed treatment-theme effects;
-- treatment dictionaries;
-- treatment interpretation cards or treatment summary tables.
 
 ## Basic usage
 
@@ -255,29 +243,29 @@ Input sample identifier.
 
 Treatment signature from the frozen interpretation atlas.
 
-### `probability_effective_research_not_calibrated`
+### `rescaled_alignment_score_0_1`
 
-Research-use probability-like score derived from spatial alignment. Higher values indicate stronger favorable spatial alignment relative to the treatment-associated spatial response pattern. This is not a clinically calibrated probability.
+Sigmoid(2 × signed alignment), an uncalibrated interpretation score on a 0–1 scale. It is not a measured or calibrated drug-response probability. Fitted V2 residual predictions are supplied by separate predictor bundles.
 
 ### `spatial_alignment_score`
 
-Signed spatial alignment score. Positive values indicate sensitivity-associated spatial alignment. Negative values indicate resistance/barrier-associated spatial alignment.
+Signed spatial alignment score. Positive values indicate alignment with higher teacher residuals; negative values indicate alignment with lower teacher residuals. These directions do not measure treatment sensitivity or resistance.
 
-### `research_prediction_label`
+### `spatial_alignment_summary`
 
-Qualitative spatial profile label, such as favorable, indeterminate, or unfavorable/barrier-aligned.
+Qualitative label describing alignment with higher teacher residuals, lower teacher residuals, or an indeterminate/balanced profile.
 
 ### `confidence_level`
 
 Evidence-support label based on feature coverage, score magnitude, and contribution support.
 
-### `top_sensitivity_features`
+### `top_higher_teacher_residual_features`
 
-Spatial features that most strongly support the sensitivity-associated direction.
+Spatial features that most strongly support the higher-teacher-residual direction.
 
-### `top_resistance_or_barrier_features`
+### `top_lower_teacher_residual_features`
 
-Spatial features that most strongly support the resistance/barrier-associated direction.
+Spatial features that most strongly support the lower-teacher-residual direction.
 
 ### `explanation`
 
@@ -299,7 +287,7 @@ Use `00c_audit_transfer_strict_feature_missingness.py` to classify missing and o
 
 ### 4. Apply reviewed zero-fill
 
-Use `00d_apply_reviewed_zero_fill.py` to fill biologically absence-like features when appropriate.
+`00d_apply_reviewed_zero_fill.py` requires explicit sample-feature absence evidence before any fill. Names alone do not establish absence. Without `--absence-evidence`, missing values remain NA; the alignment layer records neutral training-mean z=0 imputation separately from biological absence.
 
 ### 5. Run transfer inference
 
@@ -344,9 +332,9 @@ A passing smoke run writes prediction tables, contribution tables, QC files, and
 
 The model provides spatial response-alignment scores. It is best used to compare relative spatial treatment-alignment patterns across samples or treatment signatures.
 
-A higher positive alignment indicates that the sample spatial feature profile resembles sensitivity-associated spatial biology for a treatment signature.
+A higher positive alignment indicates that the sample spatial feature profile aligns with features associated with higher teacher residuals for the full recorded-treatment profile.
 
-A stronger negative alignment indicates that the sample spatial feature profile resembles resistance-associated or barrier-associated spatial biology.
+A stronger negative alignment indicates that the sample spatial feature profile aligns with features associated with lower teacher residuals.
 
 Treatment keys are inherited from the frozen model atlas. When needed, downstream reports can use simplified treatment-card labels while retaining the raw `drug_key` for provenance.
 
@@ -379,3 +367,15 @@ This module has been tested on smoke-test transfer input, one real Visium sample
 
 These test outputs are local artifacts and are not included in GitHub.
 
+
+## Frozen deployment atlas and reproducibility
+
+The reusable atlas contains the ordered reference features, training means and population standard deviations, full treatment keys, signed effects, dictionaries and source hashes. It uses the selected training reference for a single sample or a batch. Missing feature columns and duplicate sample identities fail. Explicit NA measurements remain missing in source tables and are scored at the training mean with observed-weight coverage reported.
+
+```powershell
+.venv\Scripts\python.exe prediction_modeling_pipeline\spatial_transfer_inference_model\scripts\alignment_bundle.py export --pim-run-root "PIM_RUN" --bundle "local\alignment_atlas.json"
+.venv\Scripts\python.exe prediction_modeling_pipeline\spatial_transfer_inference_model\scripts\alignment_bundle.py score --bundle "local\alignment_atlas.json" --feature-table "TRANSFER_FEATURES.csv" --output-root "local\alignment_results"
+.venv\Scripts\python.exe -m pytest prediction_modeling_pipeline\spatial_transfer_inference_model\tests -q
+```
+
+Expected rows are the actual sample count times the bundle's treatment-profile count. Historical examples using 27 profiles are not acceptance criteria. This atlas has no automatic claim to the held-out performance of the V2 fitted estimator; its own exact scoring rule requires separate evaluation before making a prediction-accuracy claim.

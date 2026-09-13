@@ -86,6 +86,19 @@ def first_line(path: Path) -> str:
         return handle.readline().strip()
 
 
+def upstream_qc_findings(output_root: Path) -> List[dict]:
+    """Carry coverage warnings and failures into final QC; process success is separate."""
+    findings = []
+    for path in sorted(output_root.glob("0[1-4]_*/**/*qc_checks.tsv")):
+        checks = read_table(path)
+        for row in checks.to_dict("records"):
+            status = str(row.get("status", "")).lower()
+            if status in {"warn", "fail"}:
+                findings.append({**row, "check_id": "upstream_" + path.parts[-3] + "_" + str(row.get("check_id", "unknown")),
+                                 "detail": str(row.get("detail", "")) + " Source: " + str(path.relative_to(output_root))})
+    return findings
+
+
 def main() -> int:
     args = parse_args()
     started = dt.datetime.now()
@@ -120,6 +133,7 @@ def main() -> int:
 
         bad_summaries = summary_df[~summary_df["status"].isin(["pass"])]
         add_qc(qc, "step_01_to_04_summary_statuses_pass", "pass" if bad_summaries.empty else "fail", len(bad_summaries), 0, "All Step 01-04 summary JSON files should report pass.")
+        qc.extend(upstream_qc_findings(output_root))
 
         missing_reports = []
         bad_filepath = []
@@ -149,11 +163,13 @@ def main() -> int:
 
         add_qc(qc, "prediction_table_nonempty", "pass" if n_rows > 0 else "fail", n_rows, ">0", "Prediction interpretation table should be nonempty.")
         add_qc(qc, "prediction_table_samples", "pass" if n_samples >= 1 else "fail", n_samples, ">=1", "At least one sample should be represented.")
-        add_qc(qc, "prediction_table_treatments", "pass" if n_drugs == 27 else "warn", n_drugs, 27, "Expected 27 PIM validated treatments.")
+        from _stim_utils import load_pim_treatment_cards
+        expected_drugs = load_pim_treatment_cards(Path(args.pim_run_root))["drug_key"].nunique()
+        add_qc(qc, "prediction_table_treatments", "pass" if n_drugs == expected_drugs else "warn", n_drugs, expected_drugs, "Expected selected PIM treatment cards.")
         add_qc(qc, "prediction_table_explanations", "pass" if "explanation" in prediction.columns and prediction["explanation"].astype(str).str.len().gt(20).all() else "fail", "present" if "explanation" in prediction.columns else "missing", "present and nonempty", "Readable explanation text should be present.")
 
-        if "probability_effective_research_not_calibrated" in prediction.columns:
-            vals = pd.to_numeric(prediction["probability_effective_research_not_calibrated"], errors="coerce")
+        if "rescaled_alignment_score_0_1" in prediction.columns:
+            vals = pd.to_numeric(prediction["rescaled_alignment_score_0_1"], errors="coerce")
             in_range = bool(vals.dropna().between(0, 1).all()) if vals.notna().any() else False
             add_qc(qc, "research_score_0_1_range", "pass" if in_range else "warn", in_range, True, "Research 0-1 score should be in [0,1].")
 

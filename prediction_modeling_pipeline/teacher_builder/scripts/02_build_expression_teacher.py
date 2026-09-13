@@ -20,10 +20,10 @@ Scientific role:
 Documentation polish marker:
     TEACHER_BUILDER_STEP02_DOC_POLISH_V1
 
-Important:
-    This documentation pass is intentionally non-behavioral. Comments, section
-    headers, and docstrings may be added, but executable logic, paths, thresholds,
-    schemas, and outputs must remain unchanged.
+Correction contract:
+    Reproduce the corrected September teacher using canonical retained raw
+    spots, Ensembl IDs, ordered model features, and saved calibration. Existing
+    corrected artifacts remain immutable and are audited separately.
 """
 
 
@@ -44,6 +44,12 @@ import numpy as np
 import pandas as pd
 
 from scipy.io import mmread
+from teacher_expression_contract import (
+    read_canonical_pseudobulk,
+    raw_counts_to_pseudobulk,
+    score_expression_artifact,
+    positive_class_probability,
+)
 
 
 
@@ -126,30 +132,11 @@ def pseudobulk_from_matrix(X, gene_ids: list[str], gene_cols: list[str], already
     # Support both gene-by-cell and cell-by-gene matrix orientations.
     """Collapse an expression matrix into a model-aligned pseudobulk gene vector."""
 
-    if X.shape[0] == len(gene_ids):
-        values = np.asarray(X.sum(axis=1)).ravel()
-    else:
-        values = np.asarray(X.sum(axis=0)).ravel()
-
-    values = values.astype(float)
-
-    # Raw-count inputs are converted to CPM-like scale and log1p transformed.
-    if not already_log_normalized:
-        total = values.sum()
-        if total > 0:
-            values = values / total * 1_000_000
-        else:
-            values = np.zeros_like(values)
-        values = np.log1p(values)
-
-    gene_to_value = dict(zip(gene_ids, values))
-    # Gene IDs may include version suffixes; keep a version-stripped lookup as fallback.
-    gene_to_value_nover = {str(g).split(".")[0]: v for g, v in zip(gene_ids, values)}
-
-    out = {}
-    for gene in gene_cols:
-        out[gene] = gene_to_value.get(gene, gene_to_value_nover.get(str(gene).split(".")[0], 0.0))
-    return out
+    if already_log_normalized:
+        raise ValueError("Canonical expression transfer requires raw retained-spot counts")
+    if X.shape[1] != len(gene_ids) and X.shape[0] == len(gene_ids):
+        X = X.T
+    return raw_counts_to_pseudobulk(X, gene_ids, gene_cols)
 
 
 
@@ -157,24 +144,12 @@ def pseudobulk_from_matrix(X, gene_ids: list[str], gene_cols: list[str], already
 # =========================
 # Processed h5ad reader
 # =========================
-# The reader prefers adata.raw when available and otherwise uses adata.X.
+# The processed file supplies retained barcodes; paired loaded file supplies raw counts.
 
 def read_h5ad_pseudobulk(h5ad_path: Path, gene_cols: list[str]) -> dict:
-    """Read one processed h5ad file and return a pseudobulk vector for model genes."""
+    """Read canonical raw counts at processed retained barcodes for model genes."""
 
-    import scanpy as sc
-
-    adata = sc.read_h5ad(h5ad_path)
-
-    # Prefer raw expression when present so pseudobulk values retain maximal gene coverage.
-    if adata.raw is not None:
-        X = adata.raw.X
-        gene_ids = adata.raw.var_names.astype(str).tolist()
-    else:
-        X = adata.X
-        gene_ids = adata.var_names.astype(str).tolist()
-
-    return pseudobulk_from_matrix(X, gene_ids, gene_cols, already_log_normalized=True)
+    return read_canonical_pseudobulk(h5ad_path, gene_cols)
 
 
 
@@ -207,6 +182,9 @@ def unwrap_predictor(obj):
     # Some artifacts are the predictor itself rather than a metadata dictionary.
     """Extract the predict_proba-capable estimator from a loaded artifact object."""
 
+    # Keep the deployable wrapper: extracting base_model alone loses calibration.
+    if isinstance(obj, dict) and "base_model" in obj:
+        return obj
     if hasattr(obj, "predict_proba"):
         return obj
     if isinstance(obj, dict):
@@ -236,13 +214,16 @@ def predict_probability(model, X):
     if model is None:
         return None
 
+    if isinstance(model, dict) and "base_model" in model:
+        return score_expression_artifact(model, X)[1]
+
     # Suppress expected sklearn feature-name warnings while preserving failure handling.
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         try:
-            return model.predict_proba(X)[:, 1]
+            return positive_class_probability(model, X)
         except Exception:
-            return model.predict_proba(X.to_numpy())[:, 1]
+            return positive_class_probability(model, X.to_numpy())
 
 
 
@@ -275,7 +256,7 @@ def main():
     if training_path is None or not training_path.exists():
         raise FileNotFoundError(f"expression_training_table not found: {training_path}")
 
-    training = read_table(training_path)
+    training = pd.read_csv(training_path, sep="\t", nrows=0)
     # The upstream expression-response training table defines the model gene feature space.
     gene_cols = find_gene_columns(training)
     if not gene_cols:
@@ -299,6 +280,8 @@ def main():
     slides = slides[slides["sample_id"].astype(str).isin(selected_samples)].copy()
 
     slides = slides.sort_values("sample_id").reset_index(drop=True)
+    if slides["sample_id"].duplicated().any():
+        raise ValueError("Ambiguous duplicate canonical expression sample paths")
     write_table(slides, output_dir / "expression_teacher_slide_manifest.tsv")
 
     print("")
@@ -345,7 +328,8 @@ def main():
     # Persist pseudobulk expression so teacher_builder runs are auditable and reusable.
     write_table(pseudobulk, output_dir / "visium_pseudobulk_expression.tsv")
 
-    X = pseudobulk[gene_cols].apply(pd.to_numeric, errors="coerce").fillna(0.0)
+    # Match the corrected September build's scored float32 matrix exactly.
+    X = pseudobulk[gene_cols].apply(pd.to_numeric, errors="raise").astype(np.float32)
 
 
 
@@ -399,9 +383,7 @@ def main():
         if artifact is not None and artifact.exists():
             try:
                 obj = load_model(artifact)
-                model = unwrap_predictor(obj)
-                if model is None:
-                    teacher_mode = "artifact_loaded_no_predict_proba_prior_only"
+                model = obj
             except Exception as e:
                 skipped_drug_rows.append(
                     {
@@ -417,10 +399,13 @@ def main():
             teacher_mode = "model_artifact_missing_prior_only"
 
         probs = None
+        raw_probs = None
+        coverage = {}
 
         if model is not None:
             try:
-                probs = predict_probability(model, X)
+                raw_probs, probs, coverage = score_expression_artifact(model, X)
+                teacher_mode = "expression_response_model_v2_canonical_gene_ids_log1p_cpm_base_model_then_saved_calibrator"
             except Exception as e:
                 skipped_drug_rows.append(
                     {
@@ -446,24 +431,28 @@ def main():
         if probs is None:
             # Prior-only fallback preserves a complete sample-by-treatment table while flagging provenance.
             probs = np.repeat(float(prior_info["treatment_prior"]), len(pseudobulk))
+            raw_probs = np.full(len(pseudobulk), np.nan)
 
-        # Clip expression probabilities before fusion so exact 0/1 labels do not propagate.
-        probs = np.clip(np.asarray(probs, dtype=float), 0.01, 0.99)
+        # Fusion owns final clipping; raw and calibrated artifact outputs remain distinct.
+        probs = np.asarray(probs, dtype=float)
+        inference_ok = "prior_only" not in teacher_mode
 
-        for sid, slide_id, prob in zip(pseudobulk["sample_id"], pseudobulk["slide_id"], probs):
+        for sid, slide_id, raw_prob, prob in zip(pseudobulk["sample_id"], pseudobulk["slide_id"], raw_probs, probs):
             score_rows.append(
                 {
                     "sample_id": sid,
                     "slide_id": slide_id,
                     "drug": drug,
                     "drug_key": drug_key,
-                    "expression_available": True,
-                    "expression_prob_raw": float(prob),
+                    "expression_available": inference_ok,
+                    "expression_prob_raw": float(raw_prob),
                     "expression_prob_calibrated": float(prob),
                     "expression_prob_responder": float(prob),
-                    "expression_sample_confidence": confidence_from_probability(prob),
-                    "expression_reliability_weight": rel,
-                    "expression_model_weight": rel,
+                    "expression_sample_confidence": confidence_from_probability(prob) if inference_ok else 0.0,
+                    "expression_reliability_weight": rel if inference_ok else 0.0,
+                    "expression_model_weight": rel if inference_ok else 0.0,
+                    "expression_inference_success": inference_ok,
+                    "expression_missing_gene_count": coverage.get("missing_gene_count", np.nan),
                     "expression_model_source": str(artifact) if artifact is not None else "",
                     "expression_teacher_mode": teacher_mode,
                     "expression_training_rows": safe_float(mrow.get("n_rows", mrow.get("training_rows", np.nan)), np.nan),

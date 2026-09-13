@@ -23,10 +23,9 @@ Scientific role:
 Documentation polish marker:
     TEACHER_BUILDER_STEP04_DOC_POLISH_V1
 
-Important:
-    This documentation pass is intentionally non-behavioral. Comments, section
-    headers, and docstrings may be added, but executable logic, paths, thresholds,
-    schemas, and outputs must remain unchanged.
+Correction contract:
+    Join verified sample identity and normalized full treatment key; display
+    names remain metadata. Ambiguous duplicate identities fail explicitly.
 """
 
 
@@ -79,6 +78,38 @@ def parse_args():
     return p.parse_args()
 
 
+def require_unique_identity(df, modality):
+    """Sample identities are exact; normalized full treatment keys define joins."""
+    for column in ("sample_id", "drug_key"):
+        if df[column].isna().any() or df[column].astype(str).str.strip().isin(["", "nan", "None"]).any():
+            raise ValueError(f"{modality}: missing {column}")
+    if df.duplicated(["sample_id", "drug_key"]).any():
+        raise ValueError(f"{modality}: duplicate sample-treatment identities after key normalization")
+
+
+def merge_teacher_modalities(expr, hist):
+    """Join only identities; display names and slide labels remain metadata."""
+    for modality, table in (("expression", expr), ("histology", hist)):
+        if not table.empty:
+            require_unique_identity(table, modality)
+    if expr.empty and hist.empty:
+        raise ValueError("No teacher rows available for fusion")
+    if expr.empty:
+        fused = hist.copy()
+        fused["expression_available"] = False
+    elif hist.empty:
+        fused = expr.copy()
+        fused["histology_available"] = False
+    else:
+        fused = expr.merge(hist, on=["sample_id", "drug_key"], how="outer", suffixes=("_exprmeta", "_histmeta"), validate="one_to_one")
+        fused["slide_id"] = fused["slide_id_exprmeta"].combine_first(fused["slide_id_histmeta"]).fillna(fused["sample_id"])
+        fused = fused.drop(columns=["slide_id_exprmeta", "slide_id_histmeta", "drug_exprmeta", "drug_histmeta"])
+    fused["drug"] = fused["drug_key"].map(display_drug_name)
+    for modality in ("expression", "histology"):
+        fused[modality+"_available"] = fused[modality+"_available"].astype("boolean").fillna(False).astype(bool)
+    return fused
+
+
 
 
 # =========================
@@ -110,13 +141,19 @@ def standardize_expression(expr: pd.DataFrame) -> pd.DataFrame:
         df["expression_prob_raw"] = pd.to_numeric(df["expression_prob_calibrated"], errors="coerce")
 
     if "expression_reliability_weight" not in df.columns:
-        df["expression_reliability_weight"] = pd.to_numeric(df.get("expression_model_weight", 0), errors="coerce").fillna(0)
+        df["expression_reliability_weight"] = pd.to_numeric(df.get("expression_model_weight", pd.Series(0.0,index=df.index)), errors="coerce").fillna(0)
 
     # Confidence defaults to distance from 0.5 for expression probabilities.
     if "expression_sample_confidence" not in df.columns:
         df["expression_sample_confidence"] = df["expression_prob_calibrated"].map(confidence_from_probability)
 
-    df["expression_available"] = True
+    if "expression_available" not in df:
+        df["expression_available"] = True
+    else:
+        df["expression_available"] = df["expression_available"].astype(str).str.lower().eq("true")
+    if "expression_teacher_mode" in df:
+        df.loc[df["expression_teacher_mode"].astype(str).str.contains("prior_only"), "expression_available"] = False
+    df.loc[~df["expression_available"], ["expression_reliability_weight", "expression_sample_confidence"]] = 0.0
 
     keep = [
         "sample_id",
@@ -141,7 +178,8 @@ def standardize_expression(expr: pd.DataFrame) -> pd.DataFrame:
         if c not in df.columns:
             df[c] = np.nan
 
-    return df[keep].drop_duplicates(["sample_id", "drug_key"], keep="first")
+    require_unique_identity(df, "expression")
+    return df[keep]
 
 
 
@@ -173,7 +211,7 @@ def standardize_histology(hist: pd.DataFrame) -> pd.DataFrame:
         df["histology_prob_raw"] = pd.to_numeric(df["histology_prob_calibrated"], errors="coerce")
 
     if "histology_reliability_weight" not in df.columns:
-        df["histology_reliability_weight"] = pd.to_numeric(df.get("histology_model_weight", 0), errors="coerce").fillna(0)
+        df["histology_reliability_weight"] = pd.to_numeric(df.get("histology_model_weight", pd.Series(0.0,index=df.index)), errors="coerce").fillna(0)
 
     # Histology confidence also defaults to distance from uncertainty at 0.5.
     if "histology_sample_confidence" not in df.columns:
@@ -209,7 +247,8 @@ def standardize_histology(hist: pd.DataFrame) -> pd.DataFrame:
         if c not in df.columns:
             df[c] = np.nan
 
-    return df[keep].drop_duplicates(["sample_id", "drug_key"], keep="first")
+    require_unique_identity(df, "histology")
+    return df[keep]
 
 
 
@@ -284,13 +323,10 @@ def main():
     # =========================
     # Fusion merge table
     # =========================
-    # The base table is merged to expression and histology scores on sample, slide, treatment key, and display name.
+    # Sample identity and normalized full treatment key define the merge.
 
     # Use one row per sample-treatment pair before modality-specific scores are merged in.
-    base = pd.concat(keys, ignore_index=True).drop_duplicates(["sample_id", "drug_key"], keep="first")
-
-    fused = base.merge(expr, on=["sample_id", "slide_id", "drug_key", "drug"], how="left")
-    fused = fused.merge(hist, on=["sample_id", "slide_id", "drug_key", "drug"], how="left", suffixes=("", "_hist"))
+    fused = merge_teacher_modalities(expr, hist)
 
     # Missing modality rows are represented as explicit availability flags.
     fused["expression_available"] = fused["expression_available"].fillna(False).astype(bool)

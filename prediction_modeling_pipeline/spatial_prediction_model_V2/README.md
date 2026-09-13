@@ -10,6 +10,8 @@ The V2 pipeline uses spatial feature tables, fused teacher labels, treatment pri
 
 The primary outputs are residual spatial biology models, treatment-level model validation results, recurrent biology themes, interpretation tables, publication-support tables, and final QC reports. Generated outputs are local artifacts and are not tracked in GitHub.
 
+The [corrected evaluation and prediction contract](docs/corrected_evaluation_and_prediction.md) documents durable Step09 recovery, the separate grouped evaluation, explicit precomputed-teacher entry point, reloadable predictors, and tested external-scoring interfaces. Conditional development validation, independent held-out evaluation, fitted-model predictions and signed-alignment scores remain distinct result types.
+
 ## Relationship to other modules
 
 `spatial_prediction_model_V2` is downstream of:
@@ -207,4 +209,3 @@ src/spm_v2/
 ```
 
 Then inspect the numbered scripts and final QC outputs from a local run if outputs are available.
-

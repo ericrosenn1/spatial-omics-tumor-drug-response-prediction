@@ -9,7 +9,7 @@ Description:
 
 Instructions:
     Run after Step 03 passes. Each card should contain model/validation evidence,
-    sensitivity-associated spatial effects, resistance-associated effects, biology
+    associated with higher teacher residual spatial effects, associated with lower teacher residual effects, biology
     themes, and interpretation caveats.
 
 Source-truth policy:
@@ -43,6 +43,8 @@ from typing import List
 
 import numpy as np
 import pandas as pd
+
+from _pim_utils import source_counts
 
 from _pim_utils import (
     add_qc,
@@ -96,17 +98,17 @@ def fmt_num(value: object, digits: int = 4) -> str:
 
 def top_feature_summary(sub: pd.DataFrame, direction: str, n: int) -> str:
     """Summarize top signed features for a card.
-    Separates sensitivity-associated and resistance-associated directions."""
+    Separates associated with higher teacher residual and associated with lower teacher residual directions."""
     # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if sub.empty:
         return "none"
     if direction == "positive":
         part = sub[pd.to_numeric(sub["signed_effect"], errors="coerce") > 0].copy()
-        label = "sensitivity-associated"
+        label = "associated with higher teacher residual"
         ascending = False
     else:
         part = sub[pd.to_numeric(sub["signed_effect"], errors="coerce") < 0].copy()
-        label = "resistance-associated"
+        label = "associated with lower teacher residual"
         ascending = True
 
     if part.empty:
@@ -130,10 +132,10 @@ def top_theme_summary(sub: pd.DataFrame, direction: str, n: int) -> str:
         return "none"
     if direction == "positive":
         part = sub[pd.to_numeric(sub["signed_theme_effect"], errors="coerce") > 0].copy()
-        label = "sensitivity-associated"
+        label = "associated with higher teacher residual"
     else:
         part = sub[pd.to_numeric(sub["signed_theme_effect"], errors="coerce") < 0].copy()
-        label = "resistance-associated"
+        label = "associated with lower teacher residual"
 
     if part.empty:
         return "none"
@@ -153,21 +155,23 @@ def build_card_text(row: pd.Series, features: pd.DataFrame, themes: pd.DataFrame
     Includes evidence, spatial mechanisms, caveats, and non-clinical framing."""
     # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     drug_key = str(row.get("drug_key", ""))
-    sensitivity_features = top_feature_summary(features, "positive", top_n_features)
-    resistance_features = top_feature_summary(features, "negative", top_n_features)
-    sensitivity_themes = top_theme_summary(themes, "positive", top_n_themes)
-    resistance_themes = top_theme_summary(themes, "negative", top_n_themes)
+    higher_teacher_residual_features = top_feature_summary(features, "positive", top_n_features)
+    lower_teacher_residual_features = top_feature_summary(features, "negative", top_n_features)
+    higher_teacher_residual_themes = top_theme_summary(themes, "positive", top_n_themes)
+    lower_teacher_residual_themes = top_theme_summary(themes, "negative", top_n_themes)
 
     lines = [
         "PREDICTION INTERPRETATION MODEL TREATMENT CARD",
         "",
         f"Treatment key: {drug_key}",
-        f"Components: {row.get('treatment_components', '')}",
+        f"Recorded components: {row.get('treatment_components', '')}",
+        "Identity: complete case-level recorded-treatment profile; timing and simultaneous administration are not established.",
         f"Component classes: {row.get('component_classes', '')}",
         f"Validation status: {row.get('label_shuffle_validation_status', row.get('integrated_interpretation_status', ''))}",
+        "Validation scope: conditional development test with a fixed supervised registry and selected candidate family; independent support is assessed separately.",
         f"Interpretation tier: {row.get('interpretation_tier', '')}",
         "",
-        "Model and validation evidence",
+        "Source fitted-estimator evidence (not performance of this signed interpretation rule)",
         f"Observed test Pearson mean: {fmt_num(row.get('observed_test_pearson_mean', row.get('test_pearson_mean', '')))}",
         f"Observed test R2 mean: {fmt_num(row.get('observed_test_r2_mean', row.get('test_r2_mean', '')))}",
         f"Observed RMSE improvement versus baseline: {fmt_num(row.get('observed_rmse_improvement_vs_baseline_mean', row.get('rmse_improvement_vs_baseline_mean', '')))}",
@@ -176,17 +180,17 @@ def build_card_text(row: pd.Series, features: pd.DataFrame, themes: pd.DataFrame
         f"Null shuffles: {row.get('n_null_shuffles', '')}",
         f"Samples available: {row.get('n_samples_total', row.get('n_samples', ''))}",
         "",
-        "Sensitivity-associated spatial effects",
-        sensitivity_features,
+        "Association with higher teacher residual spatial effects",
+        higher_teacher_residual_features,
         "",
-        "Resistance-associated spatial effects",
-        resistance_features,
+        "Association with lower teacher residual spatial effects",
+        lower_teacher_residual_features,
         "",
-        "Sensitivity-associated biology themes",
-        sensitivity_themes,
+        "Association with higher teacher residual biology themes",
+        higher_teacher_residual_themes,
         "",
-        "Resistance-associated biology themes",
-        resistance_themes,
+        "Association with lower teacher residual biology themes",
+        lower_teacher_residual_themes,
         "",
         "Interpretation",
         "This card summarizes V2 residual spatial biology for the treatment key above. Positive directionality means higher feature values are associated with above-prior fused response residuals for this treatment. Negative directionality means higher feature values are associated with below-prior fused response residuals.",
@@ -194,7 +198,8 @@ def build_card_text(row: pd.Series, features: pd.DataFrame, themes: pd.DataFrame
         "Caveats",
         "This is a biological interpretation of model-derived residual associations, not causal proof.",
         "This is not a clinical treatment recommendation.",
-        "Treatment keys may represent multi-agent regimens as harmonized by the upstream teacher and V2 modeling layers.",
+        "The full recorded-treatment key is retained. Multiple components do not establish simultaneous administration or a named clinical regimen.",
+        "Predictive performance has not been evaluated for the exact signed-effect alignment rule summarized by this card.",
     ]
     return "\n".join(lines)
 
@@ -211,6 +216,7 @@ def main() -> int:
     args = parse_args()
     started = dt.datetime.now()
     output_root = Path(args.output_root)
+    expected = source_counts(output_root)
 
     prepared_root, _ = load_prepared_index(output_root, Path(args.prepared_input_root) if args.prepared_input_root else None)
 
@@ -268,10 +274,10 @@ def main() -> int:
                 topt["card_drug_key"] = drug_key
                 top_theme_rows.extend(topt.to_dict("records"))
 
-            sensitivity_features = top_feature_summary(fsub, "positive", args.top_n_features)
-            resistance_features = top_feature_summary(fsub, "negative", args.top_n_features)
-            sensitivity_themes = top_theme_summary(tsub, "positive", args.top_n_themes)
-            resistance_themes = top_theme_summary(tsub, "negative", args.top_n_themes)
+            higher_teacher_residual_features = top_feature_summary(fsub, "positive", args.top_n_features)
+            lower_teacher_residual_features = top_feature_summary(fsub, "negative", args.top_n_features)
+            higher_teacher_residual_themes = top_theme_summary(tsub, "positive", args.top_n_themes)
+            lower_teacher_residual_themes = top_theme_summary(tsub, "negative", args.top_n_themes)
 
             card_filename = safe_filename(drug_key) + ".txt"
             card_path = card_txt_dir / card_filename
@@ -281,6 +287,9 @@ def main() -> int:
                 "drug_key": drug_key,
                 "card_path": str(card_path),
                 "treatment_components": row.get("treatment_components", ""),
+                "treatment_identity_definition": row.get("treatment_identity_definition", "case-level recorded-treatment profile; component timing and simultaneous administration are not established"),
+                "alignment_performance_status": "NOT_EVALUATED_FOR_THIS_EXACT_SCORING_RULE",
+                "source_estimator_validation_scope": "CONDITIONAL_DEVELOPMENT_FIXED_REGISTRY_SELECTED_FAMILY",
                 "component_classes": row.get("component_classes", ""),
                 "interpretation_tier": row.get("interpretation_tier", ""),
                 "label_shuffle_validation_status": row.get("label_shuffle_validation_status", row.get("integrated_interpretation_status", "")),
@@ -292,10 +301,10 @@ def main() -> int:
                 "n_samples_total": row.get("n_samples_total", row.get("n_samples", "")),
                 "n_signed_features": int(fsub["feature_name"].nunique()) if not fsub.empty else 0,
                 "n_signed_themes": int(tsub["biological_theme"].nunique()) if not tsub.empty else 0,
-                "top_sensitivity_features": sensitivity_features,
-                "top_resistance_features": resistance_features,
-                "top_sensitivity_themes": sensitivity_themes,
-                "top_resistance_themes": resistance_themes,
+                "top_higher_teacher_residual_features": higher_teacher_residual_features,
+                "top_lower_teacher_residual_features": lower_teacher_residual_features,
+                "top_higher_teacher_residual_themes": higher_teacher_residual_themes,
+                "top_lower_teacher_residual_themes": lower_teacher_residual_themes,
                 "interpretation_caveat": "Model-derived spatial residual association; not causal proof and not a treatment recommendation.",
             })
 
@@ -307,7 +316,7 @@ def main() -> int:
         write_tsv(card_table_dir / "treatment_card_top_features.tsv", top_features)
         write_tsv(card_table_dir / "treatment_card_top_themes.tsv", top_themes)
 
-        add_qc(qc, "treatment_card_count", "pass" if len(cards) == 27 else "warn", len(cards), 27, "One card should be generated per label-shuffle-validated treatment.")
+        add_qc(qc, "treatment_card_count", "pass" if len(cards) == expected["validated_treatments"] else "warn", len(cards), expected["validated_treatments"], "One card should be generated per label-shuffle-validated treatment.")
         add_qc(qc, "cards_with_signed_features", "pass" if (cards.get("n_signed_features", pd.Series(dtype=int)) > 0).all() else "fail", int((cards.get("n_signed_features", pd.Series(dtype=int)) > 0).sum()), len(cards), "Each card should have signed feature evidence.")
         add_qc(qc, "cards_with_signed_themes", "pass" if (cards.get("n_signed_themes", pd.Series(dtype=int)) > 0).all() else "fail", int((cards.get("n_signed_themes", pd.Series(dtype=int)) > 0).sum()), len(cards), "Each card should have signed theme evidence.")
         add_qc(qc, "txt_cards_written", "pass" if all(Path(p).exists() for p in cards.get("card_path", [])) else "fail", int(sum(Path(p).exists() for p in cards.get("card_path", []))), len(cards), "Every card path should exist.")

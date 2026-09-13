@@ -400,7 +400,7 @@ def summarize_examples(values: Iterable[object], max_items: int = 5) -> str:
     return "; ".join(out)
 
 
-def effect_label(corr_value: object, positive_label: str = "sensitivity_associated", negative_label: str = "resistance_associated") -> str:
+def effect_label(corr_value: object, positive_label: str = "higher_teacher_residual_association", negative_label: str = "lower_teacher_residual_association") -> str:
     """Convert a signed numeric effect into a direction label.
     Positive and negative labels are supplied by the caller."""
     # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
@@ -447,10 +447,20 @@ def zscore_frame(df: pd.DataFrame, columns: Sequence[str]) -> pd.DataFrame:
         mean = float(vals.mean()) if vals.notna().any() else 0.0
         std = float(vals.std(ddof=0)) if vals.notna().any() else 0.0
         if not math.isfinite(std) or std == 0.0:
-            out[col] = 0.0
+            out[col] = vals.where(vals.isna(), 0.0)
         else:
             out[col] = (vals - mean) / std
     return out
+
+
+def require_unique(df: pd.DataFrame, keys: Sequence[str], label: str) -> None:
+    """Reject missing or ambiguous source identities before interpretation joins."""
+    if not set(keys).issubset(df.columns):
+        raise ValueError(f"{label}: missing identity columns {sorted(set(keys) - set(df.columns))}")
+    if df[list(keys)].isna().any().any() or df[list(keys)].astype(str).apply(lambda x: x.str.strip().eq("")).any().any():
+        raise ValueError(f"{label}: missing identity value")
+    if df.duplicated(list(keys)).any():
+        raise ValueError(f"{label}: duplicate identities for {list(keys)}")
 
 
 def selected_columns(df: pd.DataFrame, columns: Sequence[str]) -> pd.DataFrame:
@@ -459,3 +469,13 @@ def selected_columns(df: pd.DataFrame, columns: Sequence[str]) -> pd.DataFrame:
     # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     keep = [c for c in columns if c in df.columns]
     return df[keep].copy()
+
+
+def source_counts(output_root):
+    """Dimensions recorded from the exact Step 01 source, for downstream parity checks."""
+    path = Path(output_root) / "01_prepared_inputs/resolved_config.json"
+    summary = json.loads(path.read_text())
+    counts = summary.get("source_counts")
+    if counts is None:
+        raise ValueError("PIM source counts absent; rerun corrected Step 01")
+    return counts

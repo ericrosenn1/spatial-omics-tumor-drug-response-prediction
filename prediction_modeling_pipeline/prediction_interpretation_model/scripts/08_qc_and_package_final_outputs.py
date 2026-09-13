@@ -46,6 +46,8 @@ import zipfile
 
 import pandas as pd
 
+from _pim_utils import source_counts
+
 from _pim_utils import (
     add_qc,
     ensure_dir,
@@ -269,6 +271,7 @@ def main() -> int:
     args = parse_args()
     started = dt.datetime.now()
     output_root = Path(args.output_root)
+    expected = source_counts(output_root)
     prepared_root, _ = load_prepared_index(output_root, Path(args.prepared_input_root) if args.prepared_input_root else None)
 
     step_root = output_root / "08_qc_and_final_package"
@@ -373,9 +376,9 @@ def main() -> int:
         score_rows = len(sample_scores)
         figure_count = len(figure_manifest)
 
-        add_qc(qc, "final_validated_treatment_count", "pass" if validated_treatments == 27 else "fail", validated_treatments, 27, "Final cards should represent 27 label-shuffle-validated treatments.")
-        add_qc(qc, "final_biology_theme_count", "pass" if theme_count == 11 else "warn", theme_count, 11, "Final mechanism atlas should represent 11 recurrent biology themes.")
-        add_qc(qc, "final_strict_feature_count", "pass" if feature_count == 139 else "warn", feature_count, 139, "Final feature dictionary should represent 139 strict biology features.")
+        add_qc(qc, "final_validated_treatment_count", "pass" if validated_treatments == expected["validated_treatments"] else "fail", validated_treatments, expected["validated_treatments"], "Final cards should represent the source-selected treatments.")
+        add_qc(qc, "final_biology_theme_count", "pass" if theme_count == expected["recurrent_biology_themes"] else "warn", theme_count, expected["recurrent_biology_themes"], "Final mechanism atlas should represent the source biology themes.")
+        add_qc(qc, "final_strict_feature_count", "pass" if feature_count == expected["strict_biology_features"] else "warn", feature_count, expected["strict_biology_features"], "Final feature dictionary should represent the source strict biology features.")
         add_qc(qc, "final_sample_score_rows", "pass" if score_rows > 0 else "fail", score_rows, ">0", "Final sample-treatment interpretation scores should be present.")
         add_qc(qc, "final_sample_coverage_documented", "pass" if sample_count >= 90 else "warn", sample_count, ">=90", "Sample coverage reflects validated-treatment eligible rows and is documented.")
         add_qc(qc, "final_figure_count", "pass" if figure_count >= 5 else "warn", figure_count, ">=5", "Final figure manifest should include presentation-ready figures.")

@@ -189,6 +189,8 @@ def load_sample_id_map(path: Optional[Path]) -> Dict[str, str]:
             f"Sample ID map must contain internal/source and transfer/output columns. Columns: {list(df.columns)}"
         )
 
+    if df[internal_col].duplicated().any() or df[transfer_col].duplicated().any():
+        raise ValueError("Sample ID map must be one-to-one")
     mapping: Dict[str, str] = {}
     for _, row in df.iterrows():
         internal = str(row[internal_col])
@@ -209,26 +211,8 @@ def candidate_tables(spatial_output_root: Path) -> List[Path]:
             out.append(path)
             seen.add(str(path).lower())
 
-    for path in spatial_output_root.rglob("*"):
-        if not path.is_file():
-            continue
-
-        if path.suffix.lower() not in [".csv", ".tsv", ".tab"]:
-            continue
-
-        low = str(path).lower()
-        if any(tok.lower() in low for tok in SKIP_PATH_TOKENS):
-            continue
-
-        try:
-            if path.stat().st_size > 100 * 1024 * 1024:
-                continue
-        except OSError:
-            continue
-
-        if str(path).lower() not in seen:
-            out.append(path)
-            seen.add(str(path).lower())
+    # Only known cumulative slide-level sources are admissible. Recursive discovery
+    # previously included this adapter's own zero-filled derivatives and spot tables.
 
     return out
 
@@ -311,7 +295,9 @@ def row_for_sample(df: pd.DataFrame, sample_id: str, path: Path) -> Optional[pd.
 
     if col is not None:
         hit = df[df[col].astype(str) == str(sample_id)]
-        if not hit.empty:
+        if len(hit) > 1:
+            raise ValueError(f"Duplicate sample identity {sample_id} in {path}")
+        if len(hit) == 1:
             return hit.iloc[0]
         return None
 
@@ -346,6 +332,10 @@ def build_handoff(
     raw_sample_ids = infer_sample_ids_from_tables(paths)
     if not raw_sample_ids:
         raise ValueError("Could not infer any sample IDs from candidate tables.")
+    if sample_map and set(raw_sample_ids) - set(sample_map):
+        raise ValueError(f"Unmapped source sample IDs: {sorted(set(raw_sample_ids) - set(sample_map))}")
+    if zero_fill_absent_zero_like:
+        raise ValueError("Name-based zero-fill is not biological-absence evidence; supply observed zeros from feature extraction")
 
     # Deduplicate by final transfer sample ID. This prevents the same slide from
     # being emitted twice when both an internal SAMPLE_#### ID and an already

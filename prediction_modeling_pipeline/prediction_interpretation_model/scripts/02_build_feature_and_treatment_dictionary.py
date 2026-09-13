@@ -46,6 +46,8 @@ from typing import List
 
 import pandas as pd
 
+from _pim_utils import source_counts, require_unique
+
 from _pim_utils import (
     add_qc,
     build_output_manifest,
@@ -297,6 +299,7 @@ def build_treatment_tables(index_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Dat
         if not df.empty:
             drug_col = choose_col(df.columns, ["drug_key", "treatment_key", "drug", "treatment"], required=False)
             if drug_col:
+                require_unique(df, [drug_col], source_id)
                 all_drugs.update(df[drug_col].dropna().astype(str).tolist())
 
     treatments = pd.DataFrame({"drug_key": sorted(all_drugs)})
@@ -305,6 +308,7 @@ def build_treatment_tables(index_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Dat
         return treatments, pd.DataFrame(), pd.DataFrame()
 
     treatments["treatment_label"] = treatments["drug_key"]
+    treatments["treatment_identity_definition"] = "case-level recorded-treatment profile; component timing and simultaneous administration are not established"
     treatments["treatment_components"] = treatments["drug_key"].map(lambda x: "; ".join(parse_treatment_components(x)))
     treatments["n_treatment_components"] = treatments["drug_key"].map(lambda x: len(parse_treatment_components(x)))
     treatments["component_classes"] = treatments["drug_key"].map(
@@ -451,6 +455,7 @@ def main() -> int:
     started = dt.datetime.now()
 
     output_root = Path(args.output_root)
+    expected = source_counts(output_root)
     prepared_root, index_df = load_prepared_index(output_root, Path(args.prepared_input_root) if args.prepared_input_root else None)
 
     step_root = output_root / "02_feature_and_treatment_dictionary"
@@ -499,9 +504,9 @@ def main() -> int:
         identity_hits = int(feature_dict["treatment_identity_like"].sum()) if "treatment_identity_like" in feature_dict.columns else 0
         missing_spatial = int((~feature_dict["present_in_v2_spatial_features_broad_pool"]).sum()) if "present_in_v2_spatial_features_broad_pool" in feature_dict.columns else 0
 
-        add_qc(qc, "strict_feature_dictionary_rows", "pass" if feature_count == 139 else "warn", feature_count, 139, "Strict biology dictionary should carry the Step 05 registry.")
-        add_qc(qc, "biology_theme_count", "pass" if theme_count == 11 else "warn", theme_count, 11, "Expected recurrent V2 biology themes.")
-        add_qc(qc, "validated_treatment_count", "pass" if validated_count == 27 else "warn", validated_count, 27, "Expected label-shuffle-validated treatments.")
+        add_qc(qc, "strict_feature_dictionary_rows", "pass" if feature_count == expected["strict_biology_features"] else "warn", feature_count, expected["strict_biology_features"], "Strict biology dictionary should carry the Step 05 registry.")
+        add_qc(qc, "biology_theme_count", "pass" if theme_count == expected["recurrent_biology_themes"] else "warn", theme_count, expected["recurrent_biology_themes"], "Expected recurrent V2 biology themes.")
+        add_qc(qc, "validated_treatment_count", "pass" if validated_count == expected["validated_treatments"] else "warn", validated_count, expected["validated_treatments"], "Expected label-shuffle-validated treatments.")
         add_qc(qc, "treatment_identity_features_absent", "pass" if identity_hits == 0 else "fail", identity_hits, 0, "Strict dictionary should not contain treatment identity features.")
         add_qc(qc, "strict_features_present_in_spatial_table", "pass" if missing_spatial == 0 else "warn", missing_spatial, 0, "Strict features should be readable from the V2 spatial feature table for signed interpretation.")
         add_qc(qc, "source_column_contract_rows", "pass" if len(source_contract) > 0 else "warn", len(source_contract), ">0", "Source schemas should be recorded for reproducibility.")

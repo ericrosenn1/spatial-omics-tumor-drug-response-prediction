@@ -1200,4 +1200,8 @@ def main() -> int:
 # =============================================================================
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # Keep historical functions readable for provenance. Execution now uses
+    # durable numerical checkpoints; the model settings and seed schedule are
+    # retained. See its manifest for the explicitly conditional test scope.
+    from spm_v2.conditional_validation import main as durable_main
+    raise SystemExit(durable_main())

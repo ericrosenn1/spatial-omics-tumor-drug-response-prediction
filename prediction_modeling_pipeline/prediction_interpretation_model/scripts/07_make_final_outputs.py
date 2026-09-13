@@ -49,6 +49,8 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+from _pim_utils import source_counts
+
 from _pim_utils import (
     add_qc,
     ensure_dir,
@@ -239,6 +241,7 @@ def main() -> int:
     args = parse_args()
     started = dt.datetime.now()
     output_root = Path(args.output_root)
+    expected = source_counts(output_root)
     prepared_root, _ = load_prepared_index(output_root, Path(args.prepared_input_root) if args.prepared_input_root else None)
 
     step02 = output_root / "02_feature_and_treatment_dictionary"
@@ -462,15 +465,15 @@ def main() -> int:
         ]
         write_text_report(report_dir / "prediction_interpretation_model_final_report.txt", "\n".join(final_report_lines))
 
-        add_qc(qc, "final_treatment_cards_count", "pass" if treatment_count == 27 else "warn", treatment_count, 27, "Final treatment cards represented.")
-        add_qc(qc, "final_strict_feature_count", "pass" if feature_count == 139 else "warn", feature_count, 139, "Strict spatial biology feature dictionary represented.")
-        add_qc(qc, "final_theme_count", "pass" if theme_count == 11 else "warn", theme_count, 11, "Recurrent biology theme atlas represented.")
+        add_qc(qc, "final_treatment_cards_count", "pass" if treatment_count == expected["validated_treatments"] else "warn", treatment_count, expected["validated_treatments"], "Final treatment cards represented.")
+        add_qc(qc, "final_strict_feature_count", "pass" if feature_count == expected["strict_biology_features"] else "warn", feature_count, expected["strict_biology_features"], "Strict spatial biology feature dictionary represented.")
+        add_qc(qc, "final_theme_count", "pass" if theme_count == expected["recurrent_biology_themes"] else "warn", theme_count, expected["recurrent_biology_themes"], "Recurrent biology theme atlas represented.")
         add_qc(qc, "final_sample_score_rows", "pass" if len(sample_scores) > 0 else "fail", len(sample_scores), ">0", "Sample-treatment interpretation scores represented.")
         add_qc(qc, "final_sample_coverage", "pass" if sample_count >= 90 else "warn", sample_count, ">=90", "Sample coverage reflects validated-treatment eligible sample-treatment rows.")
         add_qc(qc, "final_publication_tables", "pass" if len(final_table_manifest) >= 10 else "fail", len(final_table_manifest), ">=10", "Final TSV publication tables created.")
         add_qc(qc, "final_workbook_exists", "pass" if workbook_path.exists() else "fail", workbook_path.exists(), True, "Final Excel workbook created.")
         add_qc(qc, "final_figure_count", "pass" if len(figure_rows) >= 5 else "warn", len(figure_rows), ">=5", "Final figure set created.")
-        add_qc(qc, "treatment_card_txt_copied", "pass" if card_txt_count == 27 else "warn", card_txt_count, 27, "Treatment card text files copied to final supporting files.")
+        add_qc(qc, "treatment_card_txt_copied", "pass" if card_txt_count == expected["validated_treatments"] else "warn", card_txt_count, expected["validated_treatments"], "Treatment card text files copied to final supporting files.")
 
     except Exception as exc:
         errors.append("".join(traceback.format_exception(exc)))

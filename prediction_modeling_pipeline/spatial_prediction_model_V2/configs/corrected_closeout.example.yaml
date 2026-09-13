@@ -1,0 +1,28 @@
+# Local paths supplied by the reviewer; no raw data or credentials are included.
+teacher:
+  table: "<corrected_teacher.tsv.gz>"
+  sha256: "<SHA256 from the versioned corrected-artifact manifest>"
+  spatial_features: "<model_input_numeric.csv>"
+  spatial_features_sha256: "<SHA256 from the reviewed spatial handoff authority>"
+  feature_manifest: "<feature_manifest.csv>"
+  feature_manifest_sha256: "<SHA256 from the reviewed spatial handoff authority>"
+  purpose: "training and reproduction; not labels for arbitrary new samples"
+conditional_validation:
+  candidate_source: "<corrected V2 Step08>"
+  shuffles: 1000
+  repeats: 5
+  workers: 2
+  estimator_threads: 1
+  interpretation: "conditional development test on the fixed registry and selected candidate family"
+grouped_evaluation:
+  raw_features: "<slide_features_with_motif_tables.csv>"
+  verified_group_metadata: "<sample identity and dependency group manifest.tsv>"
+  reviewed_feature_classes: "<exact raw-pool feature classes with inherited spatial dependence reviewed.tsv>"
+  output: "<new versioned evaluation directory>"
+inference:
+  bundle_manifest: "<bundle_manifest.tsv>"
+  sample_features: "<new sample spatial feature table.csv>"
+  identity_manifest: "<accession and source content identity manifest.tsv>"
+  output: "<new local prediction table.tsv>"
+  missingness: "preserve NA and use only saved fitted preprocessing"
+  alignment: "separate derived score, not calibrated efficacy probability"
