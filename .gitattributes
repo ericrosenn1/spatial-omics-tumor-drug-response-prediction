@@ -7,3 +7,8 @@
 *.txt text eol=lf
 *.ps1 text eol=crlf
 *.sh text eol=lf
+
+# Preserve exact public handoff bytes and authority hashes across platforms.
+prediction_modeling_pipeline/teacher_builder/model_input_numeric.csv -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+prediction_modeling_pipeline/teacher_builder/feature_manifest.csv -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+prediction_modeling_pipeline/teacher_builder/precomputed_governed_fused_teacher_table_102samples.tsv.gz -text

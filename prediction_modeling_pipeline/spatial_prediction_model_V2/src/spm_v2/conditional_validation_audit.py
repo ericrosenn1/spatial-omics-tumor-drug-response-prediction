@@ -56,7 +56,36 @@ def independent_bh(values):
     return output
 
 
-def audit_run(output):
+def verify_execution_code(output, recorded_hashes, execution_code_snapshot=None):
+    """Verify historical execution source separately from the current auditor.
+
+    Explicit or run-local snapshots must match every original SHA256 exactly.
+    Without a snapshot, the previous strict current-file comparison applies.
+    This is an audit provenance check, never a relaxed run-resume condition.
+    """
+    expected_names = {"conditional_validation.py", "model_training.py",
+                      "conditional_validation_audit.py", "09_label_shuffle_validate_tier1.py"}
+    if set(recorded_hashes) != expected_names:
+        raise AssertionError("Unexpected execution-code file contract")
+    automatic = Path(output) / "01_inputs/execution_code"
+    snapshot = Path(execution_code_snapshot) if execution_code_snapshot is not None else (automatic if automatic.exists() else None)
+    if snapshot is not None and not snapshot.is_dir():
+        raise AssertionError(f"Execution-code snapshot directory missing: {snapshot}")
+    verified = []
+    for name, expected in recorded_hashes.items():
+        code_path = snapshot / name if snapshot is not None else (
+            Path(__file__).with_name(name) if name != "09_label_shuffle_validate_tier1.py"
+            else Path(__file__).parents[2] / "scripts" / name)
+        if not code_path.is_file() or digest(code_path) != expected:
+            raise AssertionError(f"Execution code differs from numerical run: {code_path}")
+        verified.append({"name": name, "path": str(code_path.resolve()), "sha256": expected})
+    return {"mode": "verified_execution_snapshot" if snapshot is not None else "strict_current_files",
+            "files": verified, "current_auditor_path": str(Path(__file__).resolve()),
+            "current_auditor_sha256": digest(__file__),
+            "run_resume_authorized": False}
+
+
+def audit_run(output, execution_code_snapshot=None):
     output = Path(output)
     run = json.loads((output / "run_manifest.json").read_text())
     config = run["config"]
@@ -66,10 +95,7 @@ def audit_run(output):
     for name, info in run["sources"].items():
         if digest(info["path"]) != info["sha256"]:
             raise AssertionError(f"Source changed: {name}")
-    for name, expected in run["code"].items():
-        code_path = Path(__file__).with_name(name) if name != "09_label_shuffle_validate_tier1.py" else Path(__file__).parents[2] / "scripts" / name
-        if digest(code_path) != expected:
-            raise AssertionError(f"Code changed since numerical run: {code_path}")
+    execution_code = verify_execution_code(output, run["code"], execution_code_snapshot)
     feature_pool = set(run["features"])
     if len(feature_pool) != len(run["features"]):
         raise AssertionError("Duplicate registry features")
@@ -227,7 +253,8 @@ def audit_run(output):
               "n_heldout_predictions_checked": total_predictions, "n_selected_feature_rows_checked": total_features,
               "negative_R2_split_count": int((audit.test_r2 < 0).sum()), "undefined_R2_split_count": int(audit.test_r2.isna().sum()),
               "undefined_Pearson_split_count": int(audit.test_pearson.isna().sum()),
-              "independent_discovery_validation": False, "critical_numerical_issues": []}
+              "independent_discovery_validation": False, "critical_numerical_issues": [],
+              "execution_code_verification": execution_code}
     audit_root = output / "10_independent_numerical_audit"
     audit_root.mkdir(exist_ok=True)
     pd.DataFrame(details).to_csv(audit_root / "permutation_and_key_audit.tsv", sep="\t", index=False)
@@ -244,3 +271,13 @@ def audit_run(output):
         temporary.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
         temporary.replace(path)
     return report
+
+
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", required=True, type=Path, help="Numerical run root; audit reports are written here")
+    parser.add_argument("--execution-code-snapshot", type=Path,
+                        help="Original execution files whose bytes match every recorded run code hash")
+    args = parser.parse_args()
+    print(json.dumps(audit_run(args.root, args.execution_code_snapshot), indent=2))

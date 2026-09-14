@@ -45,7 +45,6 @@ Those files are expected to live on a local machine and are excluded from GitHub
 │   │   ├── expression_response_model_v2/
 │   │   └── histology_response_model_v2/
 │   ├── teacher_builder/
-│   ├── spatial_prediction_model/
 │   ├── spatial_prediction_model_V2/
 │   ├── prediction_interpretation_model/
 │   └── spatial_transfer_inference_model/
@@ -117,7 +116,7 @@ prediction_modeling_pipeline/teacher_builder/precomputed_governed_fused_teacher_
 
 This file lets the downstream spatial prediction workflow start without rerunning the full expression and histology training process.
 
-The public gzip above is the historical handoff and remains unchanged. Corrected results use the separately versioned `20260913_readonly_repackage_of_corrected_20260907` artifact identified by its local authority manifest. Follow the [corrected handoff and prediction contract](prediction_modeling_pipeline/spatial_prediction_model_V2/docs/corrected_evaluation_and_prediction.md) and supply the recorded hashes for the teacher, spatial table and feature manifest together; the historical gzip is not the source of the corrected results.
+The public handoff now contains the corrected teacher, matching `model_input_numeric.csv`, and ordered `feature_manifest.csv`. Its [authority manifest](prediction_modeling_pipeline/teacher_builder/precomputed_handoff_manifest.json) records hashes for all three files: 34,881 rows, 102 sections, 374 recorded treatment-profile keys, and 661 spatial handoff features. Modalities comprise 651 overlaps, 471 expression-only and 33,759 histology-only rows. This training handoff does not supply labels for arbitrary unseen samples. The reviewer quickstart validates and extracts all three files together.
 
 ### 5. Spatial Prediction Model V2
 
@@ -143,7 +142,7 @@ Major steps include:
 - Publication table generation
 - Output QC
 
-The older folder `spatial_prediction_model/` is still kept for provenance and comparison.
+The superseded spatial-model implementation is preserved in Git history and a verified local archive; the maintained implementation is V2.
 
 ### 6. Prediction Interpretation Model
 
@@ -261,14 +260,29 @@ python -m venv .venv
 python -m pip install --upgrade pip
 ```
 
-Install requirements for the component you want to run. For example:
+The tested reviewer environment uses Python 3.12 and the declared compatible constraints:
 
 ```powershell
-pip install -r spatial_feature_identification_pipeline\requirements.txt
-pip install -r prediction_modeling_pipeline\spatial_prediction_model_V2\requirements.txt
+python -m pip install -r requirements-reviewer.txt -r requirements-notebooks.txt
+if ($LASTEXITCODE -ne 0) { throw "Installation failed: $LASTEXITCODE" }
+python -m pip check
+if ($LASTEXITCODE -ne 0) { throw "Dependency check failed: $LASTEXITCODE" }
 ```
 
-Some modules have their own README files and configuration notes. Those should be checked before running a full pipeline.
+Run the small seeded example from the repository root:
+
+```powershell
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+python scripts/run_reviewer_smoke.py --config configs/reviewer_smoke.json --output local/reviewer_smoke
+if ($LASTEXITCODE -ne 0) { throw "Reviewer smoke failed: $LASTEXITCODE" }
+python prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/16_prepare_precomputed_teacher.py --manifest prediction_modeling_pipeline/teacher_builder/precomputed_handoff_manifest.json --output local/precomputed_handoff
+if ($LASTEXITCODE -ne 0) { throw "Handoff verification failed: $LASTEXITCODE" }
+```
+
+Use new output directories for repeat smoke runs. The smoke processes seeded Visium-like matrices and coordinates, scores small fitted teacher fixtures, fuses labels, fits spatial predictors, tests interruption/resume with **three permutations and two splits**, and exports model predictions plus alignment/contribution reports. These settings are smoke-only. It does not train the original expression cohort or histology image model and supplies no biological validation. Full conditional validation uses 1,000 permutations and five splits.
+
+See [reviewer execution and resource requirements](docs/REVIEWER_EXECUTION.md) for exact coverage, separate real-data tests, excluded trained artifacts, and prediction commands. Component READMEs describe the complete upstream training routes.
 
 ## Basic Run Order
 
@@ -324,8 +338,8 @@ Smoke run:
 ```powershell
 python scripts\00_run_spatial_prediction_model_v2.py `
     --mode smoke `
-    --handoff-root "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_prediction_model\outputs\_derived_handoffs\residual_prior_adjusted_filtered_20260506_223625\full102_handoff" `
-    --max-workers 0 `
+    --handoff-root "YOUR_PROJECT_ROOT\local\precomputed_handoff" `
+    --max-workers 2 `
     --open-output
 ```
 
@@ -334,9 +348,9 @@ Full run:
 ```powershell
 python scripts\00_run_spatial_prediction_model_v2.py `
     --mode full `
-    --handoff-root "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_prediction_model\outputs\_derived_handoffs\residual_prior_adjusted_filtered_20260506_223625\full102_handoff" `
-    --max-workers 0 `
-    --full-step09-n-shuffles 100 `
+    --handoff-root "YOUR_PROJECT_ROOT\local\precomputed_handoff" `
+    --max-workers 2 `
+    --full-step09-n-shuffles 1000 `
     --full-step09-n-repeats 5 `
     --open-output
 ```

@@ -1,0 +1,40 @@
+name: Reviewer smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            requirements-reviewer.txt
+            constraints-reviewer.txt
+      - name: Install declared reviewer environment
+        run: |
+          python -m pip install -r requirements-reviewer.txt
+          if ($LASTEXITCODE -ne 0) { throw "Installation failed: $LASTEXITCODE" }
+          python -m pip check
+          if ($LASTEXITCODE -ne 0) { throw "Dependency check failed: $LASTEXITCODE" }
+      - name: Run source and integration regressions
+        run: |
+          python -m pytest tests spatial_feature_identification_pipeline/tests prediction_modeling_pipeline/teacher_builder/tests prediction_modeling_pipeline/spatial_prediction_model_V2/tests prediction_modeling_pipeline/prediction_interpretation_model/tests prediction_modeling_pipeline/spatial_transfer_inference_model/tests --ignore=prediction_modeling_pipeline/prediction_interpretation_model/tests/test_manuscript_docx.py -q
+          if ($LASTEXITCODE -ne 0) { throw "Regression tests failed: $LASTEXITCODE" }
+      - name: Execute documented seeded smoke and public handoff
+        run: |
+          python scripts/run_reviewer_smoke.py --config configs/reviewer_smoke.json --output local/reviewer_smoke
+          if ($LASTEXITCODE -ne 0) { throw "Reviewer smoke failed: $LASTEXITCODE" }
+          python prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/16_prepare_precomputed_teacher.py --manifest prediction_modeling_pipeline/teacher_builder/precomputed_handoff_manifest.json --output local/precomputed_handoff
+          if ($LASTEXITCODE -ne 0) { throw "Public handoff failed: $LASTEXITCODE" }

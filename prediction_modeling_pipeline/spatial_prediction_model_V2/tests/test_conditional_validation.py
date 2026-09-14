@@ -10,6 +10,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from spm_v2 import conditional_validation as cv
 from spm_v2.conditional_validation_audit import audit_run
+from spm_v2.conditional_validation_audit import verify_execution_code
 
 
 def config():
@@ -151,6 +152,8 @@ def test_full_numerical_audit_and_corruption_detection(tmp_path):
     cv.consolidate(args.output_root, paths)
     result = audit_run(Path(args.output_root))
     assert result["status"] == "PASS"
+    assert result["execution_code_verification"]["mode"] == "verified_execution_snapshot"
+    assert len(result["execution_code_verification"]["files"]) == 4
     assert result["n_split_records_recomputed"] == 16
     table_path = Path(args.output_root) / "04_validation_results/tier1_label_shuffle_validation_results.tsv"
     changed = pd.read_csv(table_path, sep="\t")
@@ -158,3 +161,49 @@ def test_full_numerical_audit_and_corruption_detection(tmp_path):
     changed.to_csv(table_path, sep="\t", index=False)
     with pytest.raises(AssertionError, match="empirical plus-one"):
         audit_run(Path(args.output_root))
+
+
+def test_execution_snapshot_survives_checkout_line_ending_change(tmp_path, monkeypatch):
+    from spm_v2 import conditional_validation_audit as audit_module
+    checkout = tmp_path / "checkout/src/spm_v2"
+    checkout.mkdir(parents=True)
+    (checkout.parents[1] / "scripts").mkdir()
+    archive = tmp_path / "historical_execution_code"
+    archive.mkdir()
+    names = ["conditional_validation.py", "model_training.py", "conditional_validation_audit.py",
+             "09_label_shuffle_validate_tier1.py"]
+    recorded = {}
+    for name in names:
+        (archive / name).write_bytes(b'"""Recorded execution."""\r\nVALUE = 1\r\n')
+        current = checkout.parents[1] / "scripts" / name if name.startswith("09_") else checkout / name
+        current.write_bytes(b'"""Recorded execution."""\nVALUE = 1\n')
+        recorded[name] = cv.sha256(archive / name)
+    monkeypatch.setattr(audit_module, "__file__", str(checkout / "conditional_validation_audit.py"))
+    with pytest.raises(AssertionError, match="Execution code differs"):
+        verify_execution_code(tmp_path / "run", recorded)
+    result = verify_execution_code(tmp_path / "run", recorded, archive)
+    assert result["mode"] == "verified_execution_snapshot"
+    assert result["run_resume_authorized"] is False
+    assert result["current_auditor_sha256"] != recorded["conditional_validation_audit.py"]
+    (archive / names[0]).write_bytes(b'VALUE = 2\n')
+    with pytest.raises(AssertionError, match="Execution code differs"):
+        verify_execution_code(tmp_path / "run", recorded, archive)
+
+
+def test_execution_snapshot_missing_file_and_overwrite_rejected(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    files = []
+    for name in ["conditional_validation.py", "model_training.py", "conditional_validation_audit.py",
+                 "09_label_shuffle_validate_tier1.py"]:
+        path = source / name
+        path.write_bytes(b'VALUE = 1\n')
+        files.append(path)
+    hashes = {path.name: cv.sha256(path) for path in files}
+    snapshot = cv.save_execution_code(tmp_path / "run", files, hashes)
+    assert verify_execution_code(tmp_path / "run", hashes)["mode"] == "verified_execution_snapshot"
+    (snapshot / files[0].name).unlink()
+    with pytest.raises(AssertionError, match="Execution code differs"):
+        verify_execution_code(tmp_path / "run", hashes)
+    with pytest.raises(ValueError, match="snapshot differs"):
+        cv.save_execution_code(tmp_path / "run", files, hashes)

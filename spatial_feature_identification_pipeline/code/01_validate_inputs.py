@@ -305,6 +305,9 @@ def main():
     print("Extract gz:", not args.no_extract_gz)
     print()
 
+    if not sample_dirs:
+        raise FileNotFoundError(f"No samples matched {sample_glob!r} under {input_root}")
+
     rows = []
 
     for i, sample_dir in enumerate(sample_dirs, start=1):
@@ -335,13 +338,15 @@ def main():
     summary_path.write_text(summary_text, encoding="utf-8")
 
     print()
-    print("DONE")
     print("Report:", report_path)
     print("Summary:", summary_path)
     print()
     print(summary_text)
+    # Preserve the per-sample evidence before signaling a failed pipeline stage.
+    if report["status"].ne("OK").any() or report["gz_failed"].fillna(0).astype(int).gt(0).any():
+        raise RuntimeError(f"Input validation failed; inspect {report_path}")
+    print("DONE")
 
 
 if __name__ == "__main__":
     main()
-

@@ -617,8 +617,22 @@ def cap_gene_sets(gene_sets: dict[str, list[str]], max_terms: int) -> dict[str, 
     return dict(list(gene_sets.items())[:max_terms])
 
 
-def load_external_libraries(max_reactome_terms: int) -> ExternalLibraries:
-    """Load Hallmark and Reactome libraries, falling back to curated local gene sets when needed."""
+def load_external_libraries(max_reactome_terms: int, source: str = "auto") -> ExternalLibraries:
+    """Load external sets or explicitly reproduce the existing curated fallback.
+
+    ``auto`` preserves the original MSigDB-then-fallback behavior. Selecting
+    ``fallback_curated_lite`` uses the same embedded genes without a network
+    request, allowing runs whose metadata records that source to be reproduced.
+    """
+    if source not in {"auto", "fallback_curated_lite"}:
+        raise ValueError(f"Unsupported external library source: {source}")
+    if source == "fallback_curated_lite":
+        return ExternalLibraries(
+            hallmark=uppercase_gene_sets(FALLBACK_HALLMARK_GENESETS),
+            reactome=cap_gene_sets(uppercase_gene_sets(FALLBACK_REACTOME_GENESETS), max_reactome_terms),
+            status="explicit_recorded_fallback_source",
+            source="fallback_curated_lite",
+        )
     if not HAS_GSEAPY or Msigdb is None:
         return ExternalLibraries(
             hallmark=uppercase_gene_sets(FALLBACK_HALLMARK_GENESETS),
@@ -2107,6 +2121,10 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--ucell-n-jobs", type=int, default=int(os.environ.get("UCELL_N_JOBS", "1")))
     parser.add_argument("--reactome-max-terms", type=int, default=75)
+    parser.add_argument(
+        "--external-library-source", choices=["auto", "fallback_curated_lite"], default="auto",
+        help="Use auto retrieval, or explicitly reproduce the embedded fallback recorded by a previous run.",
+    )
 
     parser.add_argument(
         "--per-sample-only",
@@ -2160,7 +2178,7 @@ def main() -> None:
     print("Merge only:", args.merge_only)
     print()
 
-    external = load_external_libraries(args.reactome_max_terms)
+    external = load_external_libraries(args.reactome_max_terms, args.external_library_source)
 
     print("External library status:", external.status)
     print("Hallmark terms loaded:", len(external.hallmark))

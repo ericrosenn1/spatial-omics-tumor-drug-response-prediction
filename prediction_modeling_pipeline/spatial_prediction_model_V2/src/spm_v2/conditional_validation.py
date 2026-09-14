@@ -73,6 +73,31 @@ def atomic_table(path, frame):
     os.replace(temporary, path)
 
 
+def save_execution_code(output, code_files, expected_hashes):
+    """Atomically preserve the exact executed bytes for later numerical audits.
+
+    A Git checkout may normalize line endings after execution. The snapshot
+    preserves the original byte identity; it does not authorize resuming a run
+    with different current code or change the run signature.
+    """
+    destination = Path(output) / "01_inputs/execution_code"
+    if destination.exists():
+        for name, expected in expected_hashes.items():
+            if not (destination / name).is_file() or sha256(destination / name) != expected:
+                raise ValueError(f"Execution-code snapshot differs from run: {name}")
+        return destination
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(destination.name + ".tmp." + uuid.uuid4().hex)
+    temporary.mkdir()
+    for source in code_files:
+        target = temporary / source.name
+        shutil.copy2(source, target)
+        if sha256(target) != expected_hashes[source.name]:
+            raise ValueError(f"Execution source changed while snapshotting: {source}")
+    os.replace(temporary, destination)
+    return destination
+
+
 def metrics_from_predictions(y, prediction, baseline):
     """No finite-row deletion; true R2 is 1-SSE/SST, undefined for constants."""
     y, prediction, baseline = [np.asarray(a, dtype=float) for a in (y, prediction, baseline)]
@@ -270,7 +295,9 @@ def prepare_tasks(args):
         saved = json.loads(manifest_path.read_text())
         if saved["run_signature"] != run_signature:
             raise ValueError("Run signature mismatch: use a versioned sibling; never reuse incompatible results")
+        save_execution_code(output, code_files, code_hashes)
     else:
+        save_execution_code(output, code_files, code_hashes)
         atomic_json(manifest_path, {**signature_base, "run_signature": run_signature,
                     "analysis_role": "conditional_development_validation_fixed_global_registry_and_selected_candidates",
                     "aggregation": "arithmetic mean over all repeated splits; any undefined split propagates to undefined mean",

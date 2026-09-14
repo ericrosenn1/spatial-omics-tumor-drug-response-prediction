@@ -51,8 +51,11 @@ Step 02 slide feature rows: 102
 Step 02 cluster summaries: 102
 
 Step 03 through Step 11 main tables: 102 sample rows
-Step 10 model table: 102 sample rows
-Step 10 feature manifest: 720 features
+Step 09 cumulative table: 102 rows, 823 columns including identity/metadata
+Step 10 feature-filter audit: 720 candidate entries (661 kept, 59 excluded)
+Step 10 model table: 102 sample rows, 661 retained numeric features
+Corrected teacher handoff feature manifest: 661 included features
+Downstream V2 supervised registry: 135 retained features
 
 Reactome max terms: 75
 Reactome terms loaded: 75
@@ -60,7 +63,7 @@ Hallmark terms loaded: 11
 External library source: msigdb_2023.1.Hs
 ```
 
-These generated outputs are not included in GitHub. They must be regenerated locally from the appropriate input data and configuration paths.
+Full extraction outputs remain local. The compact corrected teacher handoff includes the matching 661-feature table and included-feature manifest; its [public authority manifest](../prediction_modeling_pipeline/teacher_builder/precomputed_handoff_manifest.json) records their hashes. The 720-row extraction audit also records excluded candidates and is therefore a different schema from the 661-row downstream manifest. The raw cumulative table is identified locally by SHA256 `4ccea97ec1584c756c8a271411281af94da58552a93e2040d58cfde5994a91f3`; its 823 columns are not all model inputs.
 
 The main downstream handoff files produced by a local run are:
 
@@ -432,19 +435,28 @@ Before using a run downstream, verify:
 For the frozen local 102-sample analysis, the expected model handoff state was:
 
 ```text
-model_input_numeric.csv: 102 rows
-feature_manifest.csv: 720 rows
+model_input_numeric.csv: 102 rows and 661 numeric feature columns, plus sample_id
+feature_manifest.csv: 720 candidate audit rows, of which 661 have kept=1
+corrected teacher handoff feature_manifest.csv: 661 included-feature rows
 ```
 
 ## Data availability
 
-This repository does not include raw Visium data, processed h5ad intermediates, generated output folders, validation figures, or external publication assets. To reproduce the analysis, provide equivalent local data, update the configuration paths, run the pipeline, and regenerate outputs locally.
+This repository does not include raw Visium data, processed h5ad intermediates, generated output folders, validation figures, or external publication assets. The compact corrected teacher and matching retained-feature handoff are supplied separately under `prediction_modeling_pipeline/teacher_builder/`. Raw extraction requires the corresponding external sample inputs, configuration and recorded gene-set source; full prediction additionally requires fitted model/reference artifacts.
 
 ## Troubleshooting
 
 ### Step 02 internal data folder is missing
 
 Large Step 02 processed h5ad files may be configured to live outside the pipeline folder. This is intentional to avoid storing large h5ad intermediates in the source repository.
+
+### Required clustering or a stage fails
+
+Step02 requires the declared `igraph` and `leidenalg` dependencies. A failed Leiden operation now stops that sample with its error preserved in the processing report; it cannot be interpreted as a measured single-cluster section. The runner returns a failed child exit code and does not execute later stages. Successful computations and scientific thresholds are unchanged.
+
+### Reproducing the recorded external gene-set source
+
+Step05 normally attempts MSigDB and records whether it used the embedded curated fallback. For a prior run whose metadata explicitly records `fallback_curated_lite`, pass `--external-library-source fallback_curated_lite` directly to Step05 to use those same embedded genes without relying on a network failure. The default `auto` behavior is unchanged. Also match the recorded Reactome cap and enabled scoring methods; this option does not substitute one source silently for another.
 
 ### Old output names appear in local audit files
 
@@ -470,4 +482,3 @@ python .\run_pipeline.py --config .\configs\visium_cohort_clean.local.yaml --dry
 ```
 
 Then inspect the numbered scripts in `code/` and the configuration file in `configs/`. Generated outputs are not included in the repository and should be regenerated locally when needed.
-

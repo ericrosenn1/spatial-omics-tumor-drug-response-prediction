@@ -28,7 +28,7 @@ prediction_modeling_pipeline/prediction_interpretation_model/
 prediction_modeling_pipeline/spatial_transfer_inference_model/
 ```
 
-The older `spatial_prediction_model/` folder is retained for review and provenance because it contains earlier model-selection and modeling logic that informed the governed V2 design. The current production workflow is `spatial_prediction_model_V2/`.
+The superseded spatial-model implementation is available in Git history; V2 is the maintained implementation.
 
 ## Expected input
 
@@ -92,7 +92,6 @@ Major pipeline functions include:
 10. Integrated interpretation package generation
 11. Publication table generation
 12. Output QC
-```
 
 These steps validate the input handoff, build model-ready sample-treatment tables, model residual response signals, curate treatment-specific models, validate selected models against shuffled-label controls, and package final source-of-truth outputs for interpretation.
 
@@ -106,7 +105,7 @@ From the `spatial_prediction_model_V2` folder:
 python .\scripts\00_run_spatial_prediction_model_v2.py `
     --mode smoke `
     --handoff-root "<path-to-teacher-builder-handoff>" `
-    --max-workers 0 `
+    --max-workers 2 `
     --open-output
 ```
 
@@ -120,8 +119,8 @@ A full run performs the governed production workflow, including label-shuffle va
 python .\scripts\00_run_spatial_prediction_model_v2.py `
     --mode full `
     --handoff-root "<path-to-teacher-builder-handoff>" `
-    --max-workers 0 `
-    --full-step09-n-shuffles 100 `
+    --max-workers 2 `
+    --full-step09-n-shuffles 1000 `
     --full-step09-n-repeats 5 `
     --open-output
 ```

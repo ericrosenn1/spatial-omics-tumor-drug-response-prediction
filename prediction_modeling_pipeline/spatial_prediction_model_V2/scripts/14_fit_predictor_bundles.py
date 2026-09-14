@@ -17,6 +17,24 @@ from spm_v2.predictor_bundle import SpatialPredictorBundle,save_bundle,load_bund
 def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def numeric_handoff_path(root):
+    """Resolve the flat precomputed handoff or original teacher-stage layout.
+
+    The public precomputed command writes a flat three-file directory. Original
+    teacher-builder runs place those files under 05_prediction_ready_teacher.
+    Two matching locations are ambiguous and require an explicit narrower root.
+    """
+    root = Path(root)
+    candidates = [root / "model_input_numeric.csv",
+                  root / "05_prediction_ready_teacher/model_input_numeric.csv"]
+    found = [path for path in candidates if path.is_file()]
+    if len(found) > 1:
+        raise ValueError("Ambiguous numeric handoff: both flat and teacher-stage files exist; supply the intended handoff directory")
+    if not found:
+        raise FileNotFoundError(f"No numeric feature handoff found under {root}")
+    return found[0]
+
+
 def attach_reference(existing, raw_path, numeric_path, output):
     """Attach the verified reference without repeating any final estimator fit."""
     from spm_v2.feature_reference import FeatureReference
@@ -78,7 +96,7 @@ def attach_reference(existing, raw_path, numeric_path, output):
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("--run-root",required=True,type=Path)
-    p.add_argument("--teacher-root",required=True,type=Path)
+    p.add_argument("--teacher-root",required=True,type=Path,help="Flat three-file handoff, or a teacher output root containing 05_prediction_ready_teacher")
     p.add_argument("--output",required=True,type=Path)
     p.add_argument("--raw-feature-table",type=Path)
     p.add_argument("--existing-bundles",type=Path,help="Attach a verified raw reference to existing estimators; do not refit")
@@ -86,16 +104,16 @@ def main():
     a.output.mkdir(parents=True,exist_ok=True)
     if (a.output/"bundle_manifest.tsv").exists():
         raise ValueError("Bundle output already exists; select a new versioned destination")
+    numeric_path = numeric_handoff_path(a.teacher_root)
     if a.existing_bundles:
         if not a.raw_feature_table:raise ValueError("Existing-bundle attachment requires --raw-feature-table")
-        attach_reference(a.existing_bundles,a.raw_feature_table,a.teacher_root/"05_prediction_ready_teacher/model_input_numeric.csv",a.output)
+        attach_reference(a.existing_bundles,a.raw_feature_table,numeric_path,a.output)
         return
     step=a.run_root/"07_filtered_per_treatment_residual_models"
     manifest_path=step/"03_final_models/final_model_manifest.tsv"
     evidence_path=step/"04_shap_feature_evidence/per_treatment_final_shap_feature_long.tsv"
     registry_path=a.run_root/"05_residual_biology_registry/03_v2_strict_biology_registry/v2_strict_biology_feature_registry.tsv"
     pair_path=a.run_root/"02_build_modeling_dataset/03_modeling_datasets/v2_pair_level_residual_dataset_broad_governed_candidate_pool.tsv"
-    numeric_path=a.teacher_root/"05_prediction_ready_teacher/model_input_numeric.csv"
     manifest=pd.read_csv(manifest_path,sep="\t").sort_values("final_model_rank")
     evidence=pd.read_csv(evidence_path,sep="\t")
     features=pd.read_csv(registry_path,sep="\t").feature_name.astype(str).tolist()

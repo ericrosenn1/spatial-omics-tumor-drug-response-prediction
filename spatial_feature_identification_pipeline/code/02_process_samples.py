@@ -208,9 +208,13 @@ def preprocess_adata(
 
         try:
             sc.tl.leiden(adata, resolution=0.6, key_added="leiden")
-        except Exception:
-            adata.obs["leiden"] = "0"
-            adata.uns["leiden_error"] = "Leiden failed. Check leidenalg installation."
+        except Exception as error:
+            # A failed required clustering operation cannot become a measured
+            # single-cluster section. Preserve the stage error in its report.
+            raise RuntimeError(
+                "Leiden clustering failed; install the declared igraph/leidenalg dependencies "
+                "and inspect the underlying error before resuming this sample."
+            ) from error
     else:
         adata.obs["leiden"] = "0"
         adata.uns["pca_error"] = "Too few spots or genes for PCA"
@@ -548,6 +552,9 @@ def main():
     print("Overwrite:", args.overwrite)
     print()
 
+    if not sample_dirs:
+        raise FileNotFoundError(f"No samples matched {sample_glob!r} under {input_root}")
+
     rows = []
 
     for i, sample_dir in enumerate(tqdm(sample_dirs, desc="Processing samples"), start=1):
@@ -603,14 +610,15 @@ def main():
     summary_path.write_text(summary_text, encoding="utf-8")
 
     print()
-    print("DONE")
     print("Report:", report_path)
     print("Summary:", summary_path)
     print()
     print(summary_text)
+    # A completed report is durable evidence, not proof every sample succeeded.
+    if report["status"].eq("ERROR").any():
+        raise RuntimeError(f"Sample processing failed; inspect {report_path}")
+    print("DONE")
 
 
 if __name__ == "__main__":
     main()
-
-

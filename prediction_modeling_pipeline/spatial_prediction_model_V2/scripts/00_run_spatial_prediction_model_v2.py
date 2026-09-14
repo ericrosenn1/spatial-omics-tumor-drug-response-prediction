@@ -178,7 +178,7 @@ def main() -> int:
     parser.add_argument(
         "--max-workers",
         type=int,
-        default=0,
+        default=2,
         help="Step 09 workers. Use 0 for automatic worker selection inside Step 09.",
     )
 
@@ -189,14 +189,14 @@ def main() -> int:
     parser.add_argument("--step09-n-shuffles", type=int, default=25)
     parser.add_argument("--step09-n-repeats", type=int, default=3)
 
-    parser.add_argument("--full-step09-n-shuffles", type=int, default=100)
+    parser.add_argument("--full-step09-n-shuffles", type=int, default=1000)
     parser.add_argument("--full-step09-n-repeats", type=int, default=5)
 
     parser.add_argument("--open-output", action="store_true")
     args = parser.parse_args()
 
     py = resolve_python(args.python)
-    handoff_root = Path(args.handoff_root)
+    handoff_root = Path(args.handoff_root).resolve()
 
     if not handoff_root.exists():
         raise FileNotFoundError(f"Handoff root not found: {handoff_root}")

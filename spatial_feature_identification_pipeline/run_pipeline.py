@@ -87,10 +87,10 @@ def selected_steps(start: str, end: str) -> list[tuple[str, str]]:
 # Command line workflow
 # =========================
 
-def main() -> None:
-    """Run or preview selected pipeline steps."""
+def main() -> int:
+    """Run selected steps and return the first child failure to the caller."""
     args = parse_args()
-    cfg = validate_config(load_config(args.config))
+    cfg = validate_config(load_config(Path(args.config).resolve()))
 
     output_root = Path(cfg["output_root"])
     chosen = selected_steps(args.start, args.end)
@@ -117,7 +117,9 @@ def main() -> None:
             results.append((step, script_name, "dry_run"))
             continue
 
-        completed = subprocess.run(cmd, cwd=str(Path(__file__).resolve().parent))
+        # Parent validation and child execution must interpret relative data
+        # paths from the same working directory. Script imports use __file__.
+        completed = subprocess.run(cmd, cwd=str(Path.cwd()))
         status = "ok" if completed.returncode == 0 else f"failed_returncode_{completed.returncode}"
         results.append((step, script_name, status))
 
@@ -133,11 +135,16 @@ def main() -> None:
 
     print("")
     print("Output root:", output_root)
+    failed = next((status for _, _, status in results if status.startswith("failed_returncode_")), None)
+    if failed:
+        print("FAILED: later steps were not executed.")
+        return int(failed.removeprefix("failed_returncode_"))
     print("DONE")
 
     if args.open and os.name == "nt":
         os.startfile(str(output_root))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

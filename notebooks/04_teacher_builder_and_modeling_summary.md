@@ -104,21 +104,23 @@ md(lines)
 ```{code-cell} ipython3
 :tags: [remove-input]
 
-tracked_text = []
-for p in git_files():
-    if p.startswith("prediction_modeling_pipeline/") and p.lower().endswith((".md", ".txt", ".yaml", ".yml", ".json")):
-        tracked_text.append(read_tracked(p, limit=10000))
-combined = "\n".join(tracked_text)
-expected = {
-    "34,881 sample-treatment rows": ["34,881"],
-    "374 treatments": ["374"],
-    "291 screened treatments": ["291"],
-    "27 high-confidence residual models": ["27", "high-confidence"],
-}
-lines = ["## Tracked Documentation Numbers", ""]
-for label, terms in expected.items():
-    found = all(term.lower() in combined.lower() for term in terms)
-    lines.append(f"- {label}: {'found in tracked documentation' if found else 'not available in tracked repository text'}")
+import json
+
+authority_path = "prediction_modeling_pipeline/teacher_builder/precomputed_handoff_manifest.json"
+lines = ["## Public Training Handoff", ""]
+if tracked_exists(authority_path):
+    authority = json.loads(read_tracked(authority_path, limit=50000))
+    for label, key in [("Sample-treatment rows", "rows"), ("Sections", "samples"),
+                       ("Recorded treatment-profile keys", "treatment_profile_keys"),
+                       ("Numeric handoff features", "spatial_features")]:
+        lines.append(f"- {label}: {authority[key]:,}")
+    lines.append(f"- Source of counts and three-file hashes: `{authority_path}`")
+else:
+    lines.append("Public handoff authority is unavailable in this checkout.")
+lines.extend(["", "These are manifest counts, not a numerical validation performed by this book. "
+              "The reviewer smoke and public-handoff tests check the files. "
+              "Completed conditional development results and the separate independent evaluation "
+              "are distinguished in `docs/OUTPUT_AND_QC_CHANGES.md`."])
 lines.extend([
     "", "## Workflow Summary", "",
     "The teacher-builder combines treatment priors with expression and histology teacher signals, applies governed shrinkage and label-quality fields, and writes teacher-label handoffs for spatial prediction. The modeling folders contain response-teacher training workflows and spatial prediction workflows. This Jupyter Book page does not run those workflows."

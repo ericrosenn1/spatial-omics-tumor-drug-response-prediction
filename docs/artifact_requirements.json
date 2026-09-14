@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "public_training_handoff_manifest": "../prediction_modeling_pipeline/teacher_builder/precomputed_handoff_manifest.json",
+  "excluded_artifacts_public_retrieval": "NOT_AVAILABLE: no verified public download for trained objects or complete corrected numerical archives",
+  "supply_or_rebuild": "Supply hash-verified artifacts from the owner, or run the documented maintained training/export commands with required external inputs.",
+  "development_bundles": [
+    {
+      "drug_key": "bevacizumab | carboplatin | docetaxel | topotecan",
+      "bundle_file": "treatment_01_f6f2af1a4a28.joblib",
+      "sha256": "c25bb6f78bc000f72c451cbb453755c39471c914ff4361740bf9902fca393894",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "carboplatin | docetaxel | erlotinib | paclitaxel",
+      "bundle_file": "treatment_02_a941bb3b9675.joblib",
+      "sha256": "9b3b28a9557fde5743ab1dc3eef693f4404013fa43e8d9bcb43960741fb094fc",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "capecitabine | cisplatin | dexamethasone phosphate | docetaxel | epirubicin | fluorouracil | oxaliplatin",
+      "bundle_file": "treatment_03_03ca6acd4293.joblib",
+      "sha256": "8ef43f8a9e2061be106414dea103205857832ef9dc90fe50642af532d0015d3a",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "clinical trial | gemcitabine",
+      "bundle_file": "treatment_04_8960d07d97c7.joblib",
+      "sha256": "494049d9906cb754e5f6c3c2a7f2056a831f7b448c0cbf09c110dbf20905a8e7",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "bevacizumab | carboplatin | pemetrexed disodium",
+      "bundle_file": "treatment_05_6e3b95fde03a.joblib",
+      "sha256": "a3254562d6745ab95087bc286c310452312844b3fc2f51ae8980a8c4fe7a0eb3",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "cyclophosphamide | dacarbazine | gemcitabine | vincristine",
+      "bundle_file": "treatment_06_6e253644239e.joblib",
+      "sha256": "ca6fd3d40b76ac194a75b3283e6ea944453413006cd4e78890ad672447bda0a2",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "bcg solution | carboplatin | cisplatin | doxorubicin | gemcitabine | methotrexate | vinblastine",
+      "bundle_file": "treatment_07_bb53416c5d2c.joblib",
+      "sha256": "bc186b9cd54e08bfc12ccbe8007f6815cc6795c2ea36e1c8043c558e3a697f32",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "cisplatin | fluorouracil | gemcitabine",
+      "bundle_file": "treatment_08_fc761b04a7ff.joblib",
+      "sha256": "d9671c0af550d1dea53cdfce6f6d271d6a00cbfb1cb15d5a251a67daaba4750c",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "etoposide | paclitaxel",
+      "bundle_file": "treatment_09_5d7bc7786010.joblib",
+      "sha256": "bee013e562e963a2516f283f0cb90e0b5d2b1fd88d6c57b7aa06142785e20b77",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "antineoplastic vaccine | cisplatin | pemetrexed",
+      "bundle_file": "treatment_10_1f6e1414af6b.joblib",
+      "sha256": "eb66a432f3afbeeca91298fed0ca49cc8a5494b35433e7f96a68809a5db387c1",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "bevacizumab | etoposide | lomustine | temozolomide",
+      "bundle_file": "treatment_11_8a1396f23341.joblib",
+      "sha256": "e058d74050e9b9050d678bfcdaceedc37e22140fe94b2d2f60039b17c988a532",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "bevacizumab | carboplatin | cisplatin | dasatinib | doxorubicin | everolimus | imatinib | pemetrexed | temsirolimus",
+      "bundle_file": "treatment_12_792b72575b95.joblib",
+      "sha256": "6a0a1fffb23b56dfacc9b837c8f733af46ff6be12902c84e0c742276b1aa0ef5",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "fluorouracil | gemcitabine | irinotecan | leucovorin | nab paclitaxel | oxaliplatin",
+      "bundle_file": "treatment_13_4866a13dc7dc.joblib",
+      "sha256": "6d51e7b5bb5cd180b92f60b40dcce41ec156fb5fd823b603a517af5c5f97b927",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "bleomycin | cisplatin | mitomycin | radiation | combination | therapeutic hydrocortisone | vincristine",
+      "bundle_file": "treatment_14_981a302ff58f.joblib",
+      "sha256": "3fddf5c8d0e4cb3efc4ea9fa62d69d312bc4c2ad37ff9dd9448855e0e0ecf61f",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "cisplatin | doxorubicin | pemetrexed disodium",
+      "bundle_file": "treatment_15_2fea326f72e2.joblib",
+      "sha256": "ced98f0a9e2bd7a2abba2439c3aa7b4d3dd2dbf6f65146a035365d75ea5da133",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "dasatinib | erlotinib | gemcitabine | teprotumumab",
+      "bundle_file": "treatment_16_b82140acbc45.joblib",
+      "sha256": "c2da3f4dc3feb076dfe0f21fb03517ef1fbe9080fb9319546aa5cd12cc3ace78",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "anastrozole | cyclophosphamide | epirubicin | fluorouracil",
+      "bundle_file": "treatment_17_7ac9752998cd.joblib",
+      "sha256": "0ea120e8b8dd0792076822f8f7b214f077ee98b99de8e76f995bae48a595a447",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "fluorouracil | gemcitabine | megestrol acetate | oxaliplatin",
+      "bundle_file": "treatment_18_55a8dd8b9f6e.joblib",
+      "sha256": "6f29ed67636886d7fed0b20a8c37fbe4a33909a70bf7571fdf76b3b5696bd22b",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "cisplatin | cyclophosphamide | doxorubicin | ifosfamide | paclitaxel | tamoxifen",
+      "bundle_file": "treatment_19_1f53c72c1d12.joblib",
+      "sha256": "4f02b73cd6aca4aee62b87b5ae3f83bb98d768ac849030bb546444fce5008b7e",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "bevacizumab | capecitabine | irinotecan | mitomycin | oxaliplatin | panitumumab",
+      "bundle_file": "treatment_20_f8607392dbfd.joblib",
+      "sha256": "98659b21b44447e8cdefdab1ff920527c2d5b446db11622920bb4827f7490ab8",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "cisplatin | docetaxel | etoposide",
+      "bundle_file": "treatment_21_01c18df8e97f.joblib",
+      "sha256": "d935dd8fc0f1580743f05f2aef7ee6077529769f9dff63cfabd5cc419997fe57",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "bleomycin | cnv | cyclophosphamide | dacarbazine | doxorubicin | etoposide | mitoxantrone | vincristine",
+      "bundle_file": "treatment_22_29e65d80f32c.joblib",
+      "sha256": "f853924faf321675db006d170aeb15e764fbf1d071a17c3aef6a1a317daccc1f",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "cisplatin | docetaxel | gemcitabine",
+      "bundle_file": "treatment_23_754e0b9fa95f.joblib",
+      "sha256": "6e466ea811e020b5ed0dd31efd44a5d793ef5be22a61242230ea137413e91c03",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "carboplatin | cetuximab | fluorouracil | paclitaxel",
+      "bundle_file": "treatment_24_2edf5f30477b.joblib",
+      "sha256": "55ce7e11c7b8fd6a50cbc3871725932c0b82cf3276516fbd3681f98d2b5628ff",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "bevacizumab | cetuximab | conatumumab | fluorouracil | irinotecan | leucovorin | oxaliplatin",
+      "bundle_file": "treatment_25_03717d862113.joblib",
+      "sha256": "49610b8ac7bc3d7ac236d21bd58810d75e0568210f663fcd47f001383cf6e136",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "cisplatin | docetaxel | gemcitabine | oxaliplatin",
+      "bundle_file": "treatment_26_27fa0cc99d8c.joblib",
+      "sha256": "fef60ee60a843e799b214d4efff8cc0da8cd537f52e2c8db22b01adebfd856fe",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "erlotinib | pemetrexed disodium",
+      "bundle_file": "treatment_27_9608c800ac52.joblib",
+      "sha256": "ba9c8d22744cdc10dad1d88b2b0a608bb84c5559c39e640f4a4344fcb233e994",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "ablation | radiofrequency | cisplatin | doxorubicin | everolimus | gemcitabine | sorafenib",
+      "bundle_file": "treatment_28_1a578787a6fe.joblib",
+      "sha256": "3e25568270a7069615e672e0070bf214cf52a358bb7f907760952e714da1bace",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "carmustine | temozolomide",
+      "bundle_file": "treatment_29_94d434b4ac49.joblib",
+      "sha256": "62d0fb5da8e16746b2ae5faab7729c39d025fe34795478165572a0161d3fac56",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    },
+    {
+      "drug_key": "carboplatin | cisplatin | pemetrexed",
+      "bundle_file": "treatment_30_49e73743c948.joblib",
+      "sha256": "d1f3d180ab55878042d66e6b15d02f7b0ace85ee08effec5127863909b78889d",
+      "n_features": "60",
+      "support_status": "DEVELOPMENT_NOT_INDEPENDENTLY_VALIDATED"
+    }
+  ],
+  "reference_manifests": [
+    {
+      "resource_name": "bundle_manifest.tsv",
+      "sha256": "5d47150e92322825b27c005bd491651968897602315a9fdc3c0fe51441f1650b",
+      "bytes": 6829
+    },
+    {
+      "resource_name": "ordered_feature_manifest.tsv",
+      "sha256": "5d1aac15dfac27d2fcb99a8fc9dd6eda1f26a4d45d9ce4fa6c455efd9f23a06f",
+      "bytes": 193145
+    },
+    {
+      "resource_name": "alignment_conditional_development.json",
+      "sha256": "5ba666777dd6a1a13e64c035b87e1f7c05d14da0c90963555eeb113dac931061",
+      "bytes": 2561462
+    },
+    {
+      "resource_name": "actual_alignment_reference_reload.json",
+      "sha256": "5ba666777dd6a1a13e64c035b87e1f7c05d14da0c90963555eeb113dac931061",
+      "bytes": 2561462
+    }
+  ],
+  "independent_supported_bundle_count": 0,
+  "scope": "Development bundle checksums identify completed fitted artifacts; conditional acceptance does not establish independent support.",
+  "raw_training_feature_table": {
+    "resource_name": "slide_features_with_motif_tables.csv",
+    "sha256": "4ccea97ec1584c756c8a271411281af94da58552a93e2040d58cfde5994a91f3",
+    "availability": "External training-reference prerequisite for raw-reference reconstruction"
+  },
+  "teacher_training_requirements": [
+    "Expression training data and response metadata; saved base estimator/calibrator or full training execution",
+    "Histology images/tiles and response metadata; saved trained network or full training execution"
+  ],
+  "real_visium_requirements": [
+    "Count matrix with gene IDs and barcodes",
+    "Verified retained spots, coordinates, image/scale metadata and canonical external identity",
+    "Compatible extraction configuration and recorded gene-set source"
+  ],
+  "fixture_scope": "Seeded smoke generates small fitted test objects locally; these are not the completed scientific models."
+}

@@ -127,7 +127,7 @@ precomputed_governed_fused_teacher_table_102samples.tsv.gz
 
 This file is a compact derived teacher-label handoff generated from the expression-response and histology-response teacher workflows. It is included so downstream Visium-facing workflows can be run without retraining the upstream expression and histology teacher models.
 
-The public gzip is the historical handoff and remains unchanged. Corrected results use the separately versioned `20260913_readonly_repackage_of_corrected_20260907` artifact identified by its local authority manifest. Use the [corrected precomputed entry point](../spatial_prediction_model_V2/docs/corrected_evaluation_and_prediction.md) with the recorded hashes for all three handoff files. The historical public gzip must not substitute for that corrected authority.
+The public handoff now contains the corrected teacher, matching `model_input_numeric.csv`, and ordered `feature_manifest.csv`. Its [authority manifest](precomputed_handoff_manifest.json) records hashes for all three files: 34,881 rows, 102 sections, 374 recorded treatment-profile keys, and 661 spatial handoff features. Modalities comprise 651 overlaps, 471 expression-only and 33,759 histology-only rows. This training handoff does not supply labels for arbitrary unseen samples. The reviewer quickstart validates and extracts all three files together.
 
 The table contains governed sample-treatment teacher labels for the full configured cohort:
 

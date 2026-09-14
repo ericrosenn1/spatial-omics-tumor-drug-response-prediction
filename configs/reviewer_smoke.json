@@ -1,0 +1,18 @@
+{
+  "scope": "SMOKE_ONLY_NOT_SCIENTIFIC_VALIDATION",
+  "seed": 1729,
+  "training_sections": 16,
+  "external_sections": 2,
+  "spots_per_section": 48,
+  "genes": 256,
+  "n_shuffles": 3,
+  "n_repeats": 2,
+  "n_estimators": 16,
+  "max_depth": 2,
+  "learning_rate": 0.08,
+  "max_features_per_split": 8,
+  "test_size": 0.25,
+  "fdr_threshold": 0.05,
+  "spatial_pcs": 0,
+  "spatial_pcs_note": "The short fixture executes normalization/HVG/scaling; PCA graph, UMAP and Leiden are excluded. Physical-neighbor score refinement is executed separately. Production defaults are not modified."
+}

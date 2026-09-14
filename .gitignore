@@ -313,3 +313,8 @@ prediction_modeling_pipeline/spatial_prediction_model/configs/*output_run*.yaml
 prediction_modeling_pipeline/spatial_prediction_model/configs/*reactome75*.yaml
 spatial_feature_identification_pipeline/configs/transfer_*.yaml
 prediction_modeling_pipeline/model_training/histology_response_model_v2/docs/stage*.txt
+
+# Reviewed compact three-file training handoff; hashes live beside these files.
+!prediction_modeling_pipeline/teacher_builder/precomputed_governed_fused_teacher_table_102samples.tsv.gz
+!prediction_modeling_pipeline/teacher_builder/model_input_numeric.csv
+!prediction_modeling_pipeline/teacher_builder/feature_manifest.csv

@@ -1,0 +1,10 @@
+# Python 3.12: maintained spatial, teacher-handoff, prediction and smoke interfaces.
+# Original expression/whole-slide training has separate optional requirements.
+-c constraints-reviewer.txt
+-r spatial_feature_identification_pipeline/requirements.txt
+-r prediction_modeling_pipeline/spatial_prediction_model_V2/requirements.txt
+-e ./prediction_modeling_pipeline/spatial_prediction_model_V2
+seaborn>=0.13
+pytest-timeout>=2.4
+igraph>=0.11
+leidenalg>=0.10

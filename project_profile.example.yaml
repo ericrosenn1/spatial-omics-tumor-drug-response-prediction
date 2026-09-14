@@ -24,6 +24,9 @@ data_roots:
 
 precomputed_handoffs:
   fused_teacher_table_gz: "prediction_modeling_pipeline/teacher_builder/precomputed_governed_fused_teacher_table_102samples.tsv.gz"
+  authority_manifest: "prediction_modeling_pipeline/teacher_builder/precomputed_handoff_manifest.json"
+  spatial_features: "prediction_modeling_pipeline/teacher_builder/model_input_numeric.csv"
+  feature_manifest: "prediction_modeling_pipeline/teacher_builder/feature_manifest.csv"
   fused_teacher_table_rows: 34881
   fused_teacher_table_samples: 102
   fused_teacher_table_treatments: 374
@@ -37,8 +40,7 @@ module_configs:
   teacher_builder:
     example_config: "prediction_modeling_pipeline/teacher_builder/configs/visium_teacher_builder_governed_full.example.yaml"
     local_config: "prediction_modeling_pipeline/teacher_builder/configs/visium_teacher_builder_governed_full.local.yaml"
-    if_using_precomputed_handoff_start_at: 5
-    if_using_precomputed_handoff_stop_at: 6
+    precomputed_entry_point: "prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/16_prepare_precomputed_teacher.py"
     full_rebuild_start_at: 1
     full_rebuild_stop_at: 6
 

@@ -23,7 +23,6 @@ prediction_modeling_pipeline/
 ├── README.md
 ├── model_training/
 ├── teacher_builder/
-├── spatial_prediction_model/
 ├── spatial_prediction_model_V2/
 ├── prediction_interpretation_model/
 └── spatial_transfer_inference_model/
@@ -68,19 +67,7 @@ It supports input validation, expression teacher construction, histology teacher
 
 The main local handoff products include fused teacher tables and prediction-ready training tables. These are generated locally and excluded from GitHub.
 
-### 3. Spatial prediction model
-
-Path:
-
-```text
-spatial_prediction_model/
-```
-
-This folder contains the earlier spatial prediction workflow retained for review, provenance, and comparison with the governed V2 implementation.
-
-It includes scripts for validating inputs, building spatial modeling datasets, training spatial response models, generating sample-treatment predictions, residual modeling, label-shuffle validation, interpretation packaging, and publication-support table generation.
-
-### 4. Spatial prediction model V2
+### 3. Spatial prediction model V2
 
 Path:
 
@@ -107,7 +94,7 @@ Major functions include:
 
 This model uses spatial feature tables and teacher outputs to model treatment response residuals and identify recurrent spatial biology themes associated with predicted sensitivity or resistance.
 
-### 5. Prediction interpretation model
+### 4. Prediction interpretation model
 
 Path:
 
@@ -121,7 +108,7 @@ It prepares interpretation inputs, builds feature and treatment dictionaries, co
 
 This module consumes completed `spatial_prediction_model_V2` outputs as its source data. It should not rerun V2, redo model selection, or use deprecated prediction-interpretation outputs as source truth.
 
-### 6. Spatial transfer inference model
+### 5. Spatial transfer inference model
 
 Path:
 
@@ -151,7 +138,7 @@ prediction_interpretation_model/
 spatial_transfer_inference_model/
 ```
 
-The earlier `spatial_prediction_model/` folder is retained for review and provenance. The current primary governed implementation is `spatial_prediction_model_V2/`.
+The current maintained implementation is `spatial_prediction_model_V2/`; the superseded implementation remains in Git history.
 
 ## Expected inputs
 
@@ -166,7 +153,7 @@ teacher_builder/precomputed_governed_fused_teacher_table_102samples.tsv.gz
 
 This table contains governed fused sample-treatment teacher labels for the 102-sample analysis. It can be used to start downstream Visium-facing spatial prediction workflows without rerunning `model_training/` or the upstream teacher-builder fusion steps.
 
-This public gzip is the historical handoff and remains unchanged. Corrected results use the separately versioned `20260913_readonly_repackage_of_corrected_20260907` artifact identified by its local authority manifest. The [corrected entry point](spatial_prediction_model_V2/docs/corrected_evaluation_and_prediction.md) requires the recorded teacher, spatial-table and feature-manifest hashes together; matching `SAMPLE_*` identifiers alone does not establish corrected provenance.
+The public handoff now contains the corrected teacher, matching `model_input_numeric.csv`, and ordered `feature_manifest.csv`. Its [authority manifest](teacher_builder/precomputed_handoff_manifest.json) records hashes for all three files: 34,881 rows, 102 sections, 374 recorded treatment-profile keys, and 661 spatial handoff features. Modalities comprise 651 overlaps, 471 expression-only and 33,759 histology-only rows. This training handoff does not supply labels for arbitrary unseen samples. The reviewer quickstart validates and extracts all three files together.
 
 This is an intentional exception to the general generated-output exclusion policy. It is a compact derived handoff table, not raw expression data, raw histology data, whole-slide image data, h5ad data, or a trained model artifact.
 

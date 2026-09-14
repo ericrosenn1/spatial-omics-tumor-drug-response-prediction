@@ -32,7 +32,7 @@ if ($LASTEXITCODE -ne 0) { throw "Precomputed handoff validation failed: $LASTEX
 
 ## Corrected conditional recovery
 
-Use an explicitly versioned corrected V2 run with verified Steps01–08. Supply the original full candidate family. The production Step09 entry point now persists numerical results; the historical implementation remains in source for provenance. These parameters reproduce the corrected conditional design rather than the smaller smoke defaults.
+Use an explicitly versioned corrected V2 run with verified Steps01–08. Supply the original full candidate family. The production Step09 entry point now persists numerical results; the historical implementation remains in Git history and the verified local deprecation archive. These parameters reproduce the corrected conditional design rather than the smaller smoke defaults.
 
 ```powershell
 Set-StrictMode -Version Latest
@@ -74,6 +74,8 @@ Missing required columns fail. Explicit measured-data NA uses the fitted trainin
 
 The interpretation and transfer modules use their own explicitly selected atlas root and fitted alignment reference. Their exact scoring rule has no predictive-performance claim unless that rule itself was evaluated with training-only effects and scaling. Base-estimator metrics cannot be assigned to the alignment scorer.
 
-## Local release boundary
+## Repository and external artifacts
 
-Run the teacher, V2, interpretation and transfer regression suites with the project environment. Keep the versioned corrected teacher artifact and fitted models local. The source release candidate includes tests, example configuration, quantity definitions and exact result provenance; it does not replace the public teacher automatically, push a branch, or upload data/models. The closeout manifest records the tested local commands and pending publication action.
+The corrected three-file training handoff is included at the maintained teacher-builder path, with hashes in `precomputed_handoff_manifest.json`. Validate it using script16 with `--manifest` and a new `--output` directory. External authorities can still be supplied through all six explicit file/hash arguments above.
+
+Trained expression, histology and spatial model objects, raw Visium inputs, and complete result archives remain external resources. See the root [reviewer execution guide](../../../docs/REVIEWER_EXECUTION.md) and its artifact manifest for exact prerequisites; no public model download is claimed. The included seeded smoke checks software execution independently of those resources.

@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 def digest(path):
+    """Hash stored bytes, including compression, before trusting an input."""
     h=hashlib.sha256()
     with Path(path).open('rb') as f:
         for b in iter(lambda:f.read(4*1024*1024),b''):h.update(b)
@@ -16,6 +17,12 @@ def digest(path):
 
 def prepare(teacher,features,feature_manifest,output,expected_teacher_sha256,
             expected_features_sha256,expected_manifest_sha256):
+    """Verify the three-file training contract and preserve values and NA bytes.
+
+    Feature columns retain their fitted order; absent measurements remain NA.
+    The regression target is probability minus its recorded treatment prior.
+    This copies a reviewed training handoff, rather than fitting new teachers.
+    """
     teacher=Path(teacher);features=Path(features);feature_manifest=Path(feature_manifest);output=Path(output)
     authorities={
         'teacher':(teacher,expected_teacher_sha256),
@@ -54,6 +61,49 @@ def prepare(teacher,features,feature_manifest,output,expected_teacher_sha256,
     (output/'precomputed_handoff_manifest.json').write_text(json.dumps(record,indent=2),encoding='utf-8')
     return record
 
-if __name__=='__main__':
-    p=argparse.ArgumentParser();p.add_argument('--teacher',required=True);p.add_argument('--spatial-features',required=True);p.add_argument('--feature-manifest',required=True);p.add_argument('--output',required=True);p.add_argument('--teacher-sha256',required=True);p.add_argument('--spatial-features-sha256',required=True);p.add_argument('--feature-manifest-sha256',required=True)
-    a=p.parse_args();print(json.dumps(prepare(a.teacher,a.spatial_features,a.feature_manifest,a.output,a.teacher_sha256,a.spatial_features_sha256,a.feature_manifest_sha256),indent=2))
+def prepare_manifest(manifest_path, output):
+    """Resolve the bundled authority relative to its manifest, independent of cwd.
+
+    Only files inside the manifest directory are accepted. This convenience
+    route uses the same hash, identity, missingness and arithmetic checks as
+    explicitly supplied external authorities.
+    """
+    manifest_path = Path(manifest_path).resolve()
+    manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+    if manifest.get('artifact_role') != 'corrected_precomputed_three_file_training_handoff':
+        raise ValueError('Unexpected precomputed authority role')
+    paths, hashes = [], []
+    for label in ('teacher', 'spatial_features', 'feature_manifest'):
+        item = manifest['files'][label]
+        relative = Path(item['path'])
+        resolved = (manifest_path.parent / relative).resolve()
+        if relative.is_absolute() or not resolved.is_relative_to(manifest_path.parent):
+            raise ValueError('Authority path escapes manifest directory: ' + label)
+        paths.append(resolved)
+        hashes.append(item['sha256'])
+    return prepare(*paths, output, *hashes)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--manifest', help='Bundled three-file authority JSON')
+    parser.add_argument('--output', required=True)
+    for name in ('teacher', 'spatial-features', 'feature-manifest',
+                 'teacher-sha256', 'spatial-features-sha256', 'feature-manifest-sha256'):
+        parser.add_argument('--' + name)
+    args = parser.parse_args()
+    explicit = [args.teacher, args.spatial_features, args.feature_manifest,
+                args.teacher_sha256, args.spatial_features_sha256, args.feature_manifest_sha256]
+    if args.manifest:
+        if any(value is not None for value in explicit):
+            parser.error('--manifest cannot be combined with explicit authority arguments')
+        record = prepare_manifest(args.manifest, args.output)
+    else:
+        if not all(value is not None for value in explicit):
+            parser.error('Supply --manifest or all six explicit authority arguments')
+        record = prepare(*explicit[:3], args.output, *explicit[3:])
+    print(json.dumps(record, indent=2))
+
+
+if __name__ == '__main__':
+    main()

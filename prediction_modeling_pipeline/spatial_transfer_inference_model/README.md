@@ -379,3 +379,7 @@ The reusable atlas contains the ordered reference features, training means and p
 ```
 
 Expected rows are the actual sample count times the bundle's treatment-profile count. Historical examples using 27 profiles are not acceptance criteria. This atlas has no automatic claim to the held-out performance of the V2 fitted estimator; its own exact scoring rule requires separate evaluation before making a prediction-accuracy claim.
+
+## Verified spatial feature export
+
+Use `scripts/export_verified_spatial_feature_handoff.py` to export identified cumulative Step09 measurements before frozen-reference prediction or alignment. It verifies source/map/matrix hashes and retained-barcode identity evidence, preserves exact measurement values and NA, and rejects duplicate identities or raw headers. It does not extract features or retrain teachers. Input schemas and the maintained command are in [verified feature export](docs/verified_feature_export.md).
