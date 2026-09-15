@@ -19,7 +19,6 @@ Source-truth policy:
 """
 
 # =============================================================================
-# PIM_DOCS_PATCH: RUN AND MAINTENANCE INSTRUCTIONS
 # =============================================================================
 # Run numbered scripts through 00_run_prediction_interpretation_model.py unless
 # debugging a single step. Treat the V2 full-run root as read-only source truth.
@@ -29,7 +28,7 @@ Source-truth policy:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: imports and dependencies
+# imports and dependencies
 # =============================================================================
 # Keep imports explicit and standard-library-first where practical. The pipeline
 # expects local scripts to run from the scripts directory or through the orchestrator.
@@ -75,7 +74,7 @@ from _pim_utils import (
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: constants and source contracts
+# constants and source contracts
 # =============================================================================
 # Constants define expected files, output names, QC contracts, or reporting rules.
 
@@ -91,7 +90,7 @@ FEATURE_META_COLS = [
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: functions
+# functions
 # =============================================================================
 # Functions are intentionally small enough to support reruns, QC tracing, and
 # clear failure messages when upstream source contracts are incomplete.
@@ -99,7 +98,6 @@ FEATURE_META_COLS = [
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments for this script.
     Defaults preserve local project paths while allowing explicit overrides."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     parser = argparse.ArgumentParser()
     parser.add_argument("--project-root", default=None)
     parser.add_argument("--model-root", default="")
@@ -113,7 +111,6 @@ def parse_args() -> argparse.Namespace:
 def normalize_feature_table(df: pd.DataFrame) -> pd.DataFrame:
     """Normalize strict feature registry columns.
     Adds readable labels, fallback groups, and treatment-identity screening flags."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     out = df.copy()
     feature_col = choose_col(out.columns, ["feature_name", "feature", "spatial_feature", "model_feature", "variable"], required=True, label="feature column")
     if feature_col != "feature_name":
@@ -153,7 +150,6 @@ def normalize_feature_table(df: pd.DataFrame) -> pd.DataFrame:
 def add_feature_recurrence(feature_df: pd.DataFrame, index_df: pd.DataFrame) -> pd.DataFrame:
     """Attach recurrence and evidence summaries to feature metadata.
     Merges optional V2 evidence sources when they are present."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     out = feature_df.copy()
 
     for source_id, prefix, preferred_cols in [
@@ -238,7 +234,6 @@ def add_feature_recurrence(feature_df: pd.DataFrame, index_df: pd.DataFrame) -> 
 def build_feature_dictionaries(feature_dict: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Build feature-group and biology-theme dictionaries.
     Summarizes strict spatial features for downstream reporting."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     group_rows: List[dict] = []
     for group, sub in feature_dict.groupby("feature_group", dropna=False):
         themes = sub["biological_theme"].astype(str)
@@ -279,7 +274,6 @@ def build_feature_dictionaries(feature_dict: pd.DataFrame) -> tuple[pd.DataFrame
 def build_treatment_tables(index_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Build treatment, component, and component-by-treatment tables.
     Combines V2 eligibility, curation, validation, and component metadata."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     source_ids = [
         "v2_treatment_eligibility",
         "curated_treatment_model_table",
@@ -403,7 +397,6 @@ def build_treatment_tables(index_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Dat
 def build_source_column_contract(prepared_root: Path, index_df: pd.DataFrame) -> pd.DataFrame:
     """Build a source-column contract from Step 01 schemas.
     Documents the input columns available to later interpretation steps."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     rows: List[dict] = []
     schema_root = prepared_root / "03_source_table_schemas"
 
@@ -443,14 +436,13 @@ def build_source_column_contract(prepared_root: Path, index_df: pd.DataFrame) ->
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: main entry point
+# main entry point
 # =============================================================================
 # The main function wires inputs, output folders, QC checks, reports, and terminal summaries.
 
 def main() -> int:
     """Run the script's command-line workflow.
     Writes outputs, QC checks, summaries, and terminal status messages."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     args = parse_args()
     started = dt.datetime.now()
 
@@ -597,10 +589,9 @@ def main() -> int:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: command-line guard
+# command-line guard
 # =============================================================================
 # Keep this guard so scripts can be imported for testing without executing the step.
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

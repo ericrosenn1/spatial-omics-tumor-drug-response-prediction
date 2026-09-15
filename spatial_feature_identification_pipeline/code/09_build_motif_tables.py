@@ -57,11 +57,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from lib.config import load_config, validate_config
+from lib.config import load_config, validate_config, require_successful_stage
 
 
 # =========================
-# STRUCTURE_REGION_CONSENSUS_PATCH_V1
 # Config constants
 # =========================
 
@@ -867,6 +866,7 @@ def main():
     grad_all.to_csv(out_dir / "all_gradient_table.csv", index=False)
     slide_df.to_csv(out_dir / "slide_motif_summary.csv", index=False)
     status_df.to_csv(out_dir / "motif_table_status.csv", index=False)
+    require_successful_stage(status_df, "Spatial regions", out_dir / "motif_table_status.csv")
 
     base_path = choose_base_table(output_root)
     merged = pd.read_csv(base_path).merge(slide_df, on="sample_id", how="left")

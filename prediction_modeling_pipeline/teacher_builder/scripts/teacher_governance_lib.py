@@ -19,13 +19,6 @@ Scientific role:
     and emits warning/exclusion metadata rather than silently trusting raw
     model probabilities.
 
-Documentation polish marker:
-    TEACHER_BUILDER_GOVERNANCE_LIB_DOC_POLISH_V1
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic,
-    constants, paths, thresholds, schemas, and outputs must remain unchanged.
 """
 
 

@@ -18,13 +18,6 @@ Scientific role:
     provenance fields so downstream fusion can distinguish sample-specific model
     signal from treatment-prior support.
 
-Documentation polish marker:
-    EXPRESSION_MODEL_V2_STEP05_DOC_POLISH_V1
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic must
-    remain unchanged.
 """
 
 

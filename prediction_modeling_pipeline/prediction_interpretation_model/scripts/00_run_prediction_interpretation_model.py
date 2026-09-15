@@ -20,7 +20,6 @@ Source-truth policy:
 """
 
 # =============================================================================
-# PIM_DOCS_PATCH: RUN AND MAINTENANCE INSTRUCTIONS
 # =============================================================================
 # Run numbered scripts through 00_run_prediction_interpretation_model.py unless
 # debugging a single step. Treat the V2 full-run root as read-only source truth.
@@ -30,7 +29,7 @@ Source-truth policy:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: imports and dependencies
+# imports and dependencies
 # =============================================================================
 # Keep imports explicit and standard-library-first where practical. The pipeline
 # expects local scripts to run from the scripts directory or through the orchestrator.
@@ -50,7 +49,7 @@ from typing import Dict, List
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: constants and source contracts
+# constants and source contracts
 # =============================================================================
 # Constants define expected files, output names, QC contracts, or reporting rules.
 
@@ -91,7 +90,7 @@ STEP_MAP: Dict[str, Dict[str, str]] = {
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: functions
+# functions
 # =============================================================================
 # Functions are intentionally small enough to support reruns, QC tracing, and
 # clear failure messages when upstream source contracts are incomplete.
@@ -99,14 +98,12 @@ STEP_MAP: Dict[str, Dict[str, str]] = {
 def now_stamp() -> str:
     """Return a filesystem-safe timestamp string.
     Used for run names, patch logs, and reproducible report folders."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     return dt.datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
 def write_text_report(path: Path, body: str) -> None:
     """Write a text report with FILEPATH on the first line.
     This convention is required for all generated text reports."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(f"FILEPATH: {path}\n\n{body}", encoding="utf-8")
 
@@ -114,7 +111,6 @@ def write_text_report(path: Path, body: str) -> None:
 def write_json(path: Path, data: object) -> None:
     """Write structured metadata as formatted JSON.
     Creates parent folders and preserves readable provenance output."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
 
@@ -122,7 +118,6 @@ def write_json(path: Path, data: object) -> None:
 def write_tsv(path: Path, rows: List[dict]) -> None:
     """Write a pandas DataFrame as a tab-separated table.
     Creates parent folders before writing the output artifact."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = sorted({key for row in rows for key in row.keys()})
     with path.open("w", encoding="utf-8", newline="") as handle:
@@ -135,7 +130,6 @@ def write_tsv(path: Path, rows: List[dict]) -> None:
 def parse_steps(value: str) -> List[str]:
     """Parse a comma-separated step request.
     Validates requested steps against the orchestrator step map."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     value = str(value).strip()
     if value.lower() == "all":
         return list(STEP_MAP.keys())
@@ -160,7 +154,6 @@ def parse_steps(value: str) -> List[str]:
 def open_folder(path: Path) -> None:
     """Open an output folder in the local operating system.
     Failures are intentionally nonfatal so batch runs can continue."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     try:
         if os.name == "nt":
             os.startfile(str(path))
@@ -175,7 +168,6 @@ def open_folder(path: Path) -> None:
 def build_output_manifest(root: Path) -> List[dict]:
     """Inventory files under an output root.
     Captures relative paths, absolute paths, file sizes, and suffixes."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     rows = []
     for path in sorted(root.rglob("*")):
         if path.is_file():
@@ -207,7 +199,6 @@ def run_step(
 ) -> dict:
     """Run one pipeline step as a subprocess.
     Captures stdout, stderr, return code, elapsed time, and status metadata."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     info = STEP_MAP[step]
     script_path = model_root / "scripts" / info["script"]
 
@@ -283,14 +274,13 @@ def run_step(
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments for this script.
     Defaults preserve local project paths while allowing explicit overrides."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     parser = argparse.ArgumentParser()
     parser.add_argument("--spatial-feature-override", default="")
     parser.add_argument("--spatial-feature-override-sha256", default="")
 
     parser.add_argument(
         "--project-root",
-        default=None,
+        default=str(Path(__file__).resolve().parents[3]),
     )
     parser.add_argument(
         "--model-root",
@@ -311,7 +301,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--steps",
         default="01",
-        help="Comma-separated steps such as 01 or 01,02. Use all after all scripts are implemented.",
+        help="Comma-separated steps such as 01 or 01,02; use all to execute Steps 01-08.",
     )
     parser.add_argument(
         "--python",
@@ -326,26 +316,25 @@ def parse_args() -> argparse.Namespace:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: main entry point
+# main entry point
 # =============================================================================
 # The main function wires inputs, output folders, QC checks, reports, and terminal summaries.
 
 def main() -> int:
     """Run the script's command-line workflow.
     Writes outputs, QC checks, summaries, and terminal status messages."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     args = parse_args()
 
-    project_root = Path(args.project_root)
+    project_root = Path(args.project_root).resolve()
     if args.model_root:
-        model_root = Path(args.model_root)
+        model_root = Path(args.model_root).resolve()
     else:
         model_root = Path(__file__).resolve().parents[1]
 
-    v2_run_root = Path(args.v2_run_root)
+    v2_run_root = Path(args.v2_run_root).resolve()
 
     if args.output_root:
-        output_root = Path(args.output_root)
+        output_root = Path(args.output_root).resolve()
     else:
         output_root = model_root / "outputs" / args.run_name
 
@@ -454,10 +443,9 @@ def main() -> int:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: command-line guard
+# command-line guard
 # =============================================================================
 # Keep this guard so scripts can be imported for testing without executing the step.
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

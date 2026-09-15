@@ -18,13 +18,6 @@ Scientific role:
     mapping explicit so downstream response labels and trained model artifacts use
     stable treatment keys rather than ad hoc text labels.
 
-Documentation polish marker:
-    EXPRESSION_MODEL_V2_STEP00_DOC_POLISH_V1
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic must
-    remain unchanged.
 """
 
 

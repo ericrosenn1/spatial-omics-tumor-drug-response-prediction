@@ -203,8 +203,8 @@ def preprocess_adata(
 
         try:
             sc.tl.umap(adata)
-        except Exception:
-            adata.uns["umap_error"] = "UMAP failed"
+        except Exception as error:
+            raise RuntimeError("UMAP failed; inspect the underlying error before resuming this sample.") from error
 
         try:
             sc.tl.leiden(adata, resolution=0.6, key_added="leiden")
@@ -216,8 +216,7 @@ def preprocess_adata(
                 "and inspect the underlying error before resuming this sample."
             ) from error
     else:
-        adata.obs["leiden"] = "0"
-        adata.uns["pca_error"] = "Too few spots or genes for PCA"
+        raise ValueError("Too few retained spots or genes for required PCA and Leiden clustering")
 
     return adata
 

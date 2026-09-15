@@ -16,14 +16,6 @@ Scientific role:
     repeated validation, and final feature evidence help separate plausible
     treatment-specific spatial biology from weak or under-supported screens.
 
-Documentation polish marker:
-    SPATIAL_PREDICTION_MODEL_V2_STEP07_DOC_POLISH_V2
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic,
-    imports, constants, thresholds, hyperparameters, feature-selection
-    rules, output filenames, and return codes must remain unchanged.
 """
 
 

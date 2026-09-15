@@ -19,14 +19,6 @@ Scientific role:
     modeling can be audited for feature inclusion, sample-treatment coverage, and
     independence from legacy V1 production outputs.
 
-Documentation polish marker:
-    SPATIAL_PREDICTION_MODEL_V2_STEP02_DOC_POLISH_V1
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments, section
-    headers, and docstrings may be added, but executable logic, imports, constants,
-    paths, thresholds, schemas, output filenames, and return codes must remain
-    unchanged.
 """
 
 

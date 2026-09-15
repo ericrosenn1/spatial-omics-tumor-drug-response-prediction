@@ -158,7 +158,7 @@ def area_for(path):
         return "Prediction Interpretation"
     if p.startswith("prediction_modeling_pipeline/spatial_transfer_inference_model/"):
         return "Spatial Transfer Inference"
-    if p.startswith("scripts/") or p.startswith("data_manifest/") or p.endswith("project_profile.example.yaml"):
+    if p.startswith("scripts/") or p.startswith("data_manifest/"):
         return "Root Helpers, Configs, Manifests"
     return p.split("/", 1)[0]
 

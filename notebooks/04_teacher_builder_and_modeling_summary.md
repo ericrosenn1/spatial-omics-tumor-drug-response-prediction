@@ -118,7 +118,7 @@ if tracked_exists(authority_path):
 else:
     lines.append("Public handoff authority is unavailable in this checkout.")
 lines.extend(["", "These are manifest counts, not a numerical validation performed by this book. "
-              "The reviewer smoke and public-handoff tests check the files. "
+              "The workflow smoke and public-handoff tests check the files. "
               "Completed conditional development results and the separate independent evaluation "
               "are distinguished in `docs/OUTPUT_AND_QC_CHANGES.md`."])
 lines.extend([

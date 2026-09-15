@@ -16,9 +16,6 @@ Scientific context:
     improve over treatment_only, because treatment identity alone is a major
     confounder in response modeling.
 
-Documentation safety:
-    Documentation edits should not change executable behavior, thresholds, paths,
-    schemas, model settings, or outputs.
 """
 
 

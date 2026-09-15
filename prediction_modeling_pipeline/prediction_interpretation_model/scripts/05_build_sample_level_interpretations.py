@@ -18,7 +18,6 @@ Source-truth policy:
 """
 
 # =============================================================================
-# PIM_DOCS_PATCH: RUN AND MAINTENANCE INSTRUCTIONS
 # =============================================================================
 # Run numbered scripts through 00_run_prediction_interpretation_model.py unless
 # debugging a single step. Treat the V2 full-run root as read-only source truth.
@@ -28,7 +27,7 @@ Source-truth policy:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: imports and dependencies
+# imports and dependencies
 # =============================================================================
 # Keep imports explicit and standard-library-first where practical. The pipeline
 # expects local scripts to run from the scripts directory or through the orchestrator.
@@ -67,7 +66,7 @@ from _pim_utils import (
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: functions
+# functions
 # =============================================================================
 # Functions are intentionally small enough to support reruns, QC tracing, and
 # clear failure messages when upstream source contracts are incomplete.
@@ -75,7 +74,6 @@ from _pim_utils import (
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments for this script.
     Defaults preserve local project paths while allowing explicit overrides."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     parser = argparse.ArgumentParser()
     parser.add_argument("--project-root", default=None)
     parser.add_argument("--model-root", default="")
@@ -92,7 +90,6 @@ def parse_args() -> argparse.Namespace:
 def read_pair_minimal(index_df: pd.DataFrame, target_col: str) -> pd.DataFrame:
     """Read only required pair-level columns from the large V2 table.
     Keeps signed-effect and sample-level steps memory-conscious."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     pair_path = source_path(index_df, "v2_pair_level_residual_dataset", prefer_copied=False)
     columns = read_header(pair_path)
 
@@ -125,7 +122,6 @@ def read_pair_minimal(index_df: pd.DataFrame, target_col: str) -> pd.DataFrame:
 def load_spatial_z(index_df: pd.DataFrame, features: List[str]) -> pd.DataFrame:
     """Load and z-score spatial features for sample scoring.
     Z-scores are computed across available samples in the spatial feature table."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     spatial = read_source_table(index_df, "v2_spatial_features_broad_pool")
     sample_col = choose_col(spatial.columns, ["sample_id", "slide_id", "sample"], required=True, label="spatial sample column")
     if sample_col != "sample_id":
@@ -143,7 +139,6 @@ def load_spatial_z(index_df: pd.DataFrame, features: List[str]) -> pd.DataFrame:
 def driver_text(rows: pd.DataFrame, direction: str, n: int) -> str:
     """Create readable driver-feature text for sample scores.
     Reports the strongest positive or negative feature contributions."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if rows.empty:
         return "none"
     if direction == "positive":
@@ -172,7 +167,6 @@ def build_scores_for_treatment(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Build sample-level scores for one validated treatment.
     Returns score rows and top feature-contribution rows."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if pair_sub.empty or effects.empty:
         return pd.DataFrame(), pd.DataFrame()
 
@@ -298,14 +292,13 @@ def build_scores_for_treatment(
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: main entry point
+# main entry point
 # =============================================================================
 # The main function wires inputs, output folders, QC checks, reports, and terminal summaries.
 
 def main() -> int:
     """Run the script's command-line workflow.
     Writes outputs, QC checks, summaries, and terminal status messages."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     args = parse_args()
     started = dt.datetime.now()
     output_root = Path(args.output_root)
@@ -537,10 +530,9 @@ def main() -> int:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: command-line guard
+# command-line guard
 # =============================================================================
 # Keep this guard so scripts can be imported for testing without executing the step.
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

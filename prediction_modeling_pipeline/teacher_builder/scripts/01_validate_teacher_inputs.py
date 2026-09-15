@@ -18,13 +18,6 @@ Scientific role:
     training table, and documents expression/histology reliability metadata before
     sample-by-treatment teacher labels are built.
 
-Documentation polish marker:
-    TEACHER_BUILDER_STEP01_DOC_POLISH_V1
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic,
-    paths, thresholds, schemas, and outputs must remain unchanged.
 """
 
 
@@ -436,7 +429,7 @@ def main():
         lines.append("No critical issues detected")
 
     summary_text = "\n".join(lines)
-    # The plain-text summary is the reviewer-facing validation artifact.
+    # The plain-text summary is the human-readable validation artifact.
     (out_dir / "teacher_input_validation_summary.txt").write_text(summary_text, encoding="utf-8")
 
     print("")

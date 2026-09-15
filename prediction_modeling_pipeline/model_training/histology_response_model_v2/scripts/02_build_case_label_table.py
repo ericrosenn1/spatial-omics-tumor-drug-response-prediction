@@ -14,9 +14,6 @@ Scientific context:
     records response provenance, treatment specificity, and strict usability so
     downstream slide linkage and patient-level splitting are auditable.
 
-Documentation safety:
-    Documentation edits should not change executable behavior, thresholds, paths,
-    schemas, model settings, or outputs.
 """
 
 

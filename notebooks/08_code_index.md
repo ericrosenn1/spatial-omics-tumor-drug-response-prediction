@@ -13,7 +13,7 @@ kernelspec:
 
 # Code Index
 
-A compact orientation page for project reviewers: which tracked pipeline areas contain code, configs, docs, and where the code is exposed in this Jupyter Book.
+A compact index of tracked code, configurations and documentation in this Jupyter Book.
 
 ```{code-cell} ipython3
 :tags: [remove-input]
@@ -158,7 +158,7 @@ def area_for(path):
         return "Prediction Interpretation"
     if p.startswith("prediction_modeling_pipeline/spatial_transfer_inference_model/"):
         return "Spatial Transfer Inference"
-    if p.startswith("scripts/") or p.startswith("data_manifest/") or p.endswith("project_profile.example.yaml"):
+    if p.startswith("scripts/") or p.startswith("data_manifest/"):
         return "Root Helpers, Configs, Manifests"
     return p.split("/", 1)[0]
 

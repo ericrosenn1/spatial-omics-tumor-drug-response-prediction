@@ -16,9 +16,6 @@ Scientific context:
     outputs, not training data, and they inform how conservatively downstream
     teacher_builder should use histology probabilities.
 
-Documentation safety:
-    Documentation edits should not change executable behavior, thresholds, paths,
-    schemas, model settings, or outputs.
 """
 
 

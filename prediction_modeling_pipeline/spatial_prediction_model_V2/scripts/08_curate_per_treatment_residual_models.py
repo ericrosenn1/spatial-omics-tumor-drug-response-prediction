@@ -14,14 +14,6 @@ Scientific role:
     biological claims. Tier assignment marks which screens are ready for label-
     shuffle validation and which should remain exploratory or cautionary.
 
-Documentation polish marker:
-    SPATIAL_PREDICTION_MODEL_V2_STEP08_DOC_POLISH_V2
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic,
-    imports, constants, thresholds, hyperparameters, feature-selection
-    rules, output filenames, and return codes must remain unchanged.
 """
 
 
@@ -95,7 +87,7 @@ def find_score_col(df: pd.DataFrame) -> str:
 
 
 def tier_reason(row: pd.Series) -> str:
-    """Build a reviewer-facing explanation for one treatment model tier assignment."""
+    """Build a human-readable explanation for one treatment model tier assignment."""
 
     reasons = []
 

@@ -72,6 +72,19 @@ python scripts/download_and_reconstruct_public_visium_sources.py `
 ```
 
 If neither `--download` nor `--stage` is supplied, the script defaults to both actions.
+
+Use `--download` alone to cache files without staging or archive extraction. Use
+`--stage` alone to extract cached archives and construct sample folders offline.
+Archive paths are confined to the staging root; links and unsafe members are
+rejected. Completed extraction records bind source and member hashes. Partial
+extractions are repaired, and existing staged files are compared with their
+source content before reuse. Gzip outputs are published only after successful
+decompression. Download, extraction or staging failures return a nonzero status.
+
+`--dry-run` performs no writes. No biological metadata are inferred from folder
+names: generated metadata records only the manifest's source identifiers.
+Provider checksums are checked when available; a successful URL check is not a
+verification of every source file or of biological identity.
 Validate source URLs without downloading full files:
 
 ```powershell

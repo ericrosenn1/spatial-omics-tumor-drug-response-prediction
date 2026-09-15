@@ -15,6 +15,15 @@ from pathlib import Path
 import yaml
 
 
+def require_successful_stage(status_rows, stage, report_path):
+    """Prevent recorded sample errors or an empty run from reporting success."""
+    rows = status_rows.to_dict("records") if hasattr(status_rows, "to_dict") else list(status_rows)
+    statuses = [str(row.get("status", "")).lower() for row in rows]
+    failures = [row for row, status in zip(rows, statuses) if status not in {"ok", "already_present", "skipped"}]
+    if failures or not any(status in {"ok", "already_present"} for status in statuses):
+        raise RuntimeError(f"{stage} failed or produced no successful samples; inspect {report_path}. Failed rows: {len(failures)}")
+
+
 
 # =========================
 # Config loading
@@ -59,4 +68,3 @@ def validate_config(cfg):
     cfg["output_root"].mkdir(parents=True, exist_ok=True)
 
     return cfg
-

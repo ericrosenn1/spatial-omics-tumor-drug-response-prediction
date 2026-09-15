@@ -78,4 +78,4 @@ The interpretation and transfer modules use their own explicitly selected atlas 
 
 The corrected three-file training handoff is included at the maintained teacher-builder path, with hashes in `precomputed_handoff_manifest.json`. Validate it using script16 with `--manifest` and a new `--output` directory. External authorities can still be supplied through all six explicit file/hash arguments above.
 
-Trained expression, histology and spatial model objects, raw Visium inputs, and complete result archives remain external resources. See the root [reviewer execution guide](../../../docs/REVIEWER_EXECUTION.md) and its artifact manifest for exact prerequisites; no public model download is claimed. The included seeded smoke checks software execution independently of those resources.
+Trained expression, histology and spatial model objects, raw Visium inputs, and complete result archives remain external resources. See the root [execution guide](../../../docs/REVIEWER_EXECUTION.md) and its artifact manifest for exact prerequisites; no public model download is claimed. The included seeded smoke checks software execution independently of those resources.

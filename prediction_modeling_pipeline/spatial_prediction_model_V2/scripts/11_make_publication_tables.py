@@ -16,14 +16,6 @@ Scientific role:
     biology themes, figure metadata, recommendations, and provenance into
     manuscript-friendly artifacts.
 
-Documentation polish marker:
-    SPATIAL_PREDICTION_MODEL_V2_STEP11_DOC_POLISH_V1
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic,
-    imports, constants, thresholds, hyperparameters, validation rules,
-    output filenames, and return codes must remain unchanged.
 """
 
 
@@ -258,7 +250,7 @@ def create_excel_workbook(tables: dict[str, pd.DataFrame], xlsx_path: Path) -> t
 
 
 def table_description(name: str) -> str:
-    """Return a short reviewer-facing description for a workbook sheet."""
+    """Return a short human-readable description for a workbook sheet."""
 
     descriptions = {
         "Model_Comparison": "Model family comparison with purpose, inputs, outputs, metrics, and validation status.",
@@ -520,7 +512,7 @@ def main() -> int:
         write_table(df, path)
         tsv_paths[name] = path
 
-    # The Excel workbook is the main human-facing table bundle for collaborators and reviewers.
+    # The Excel workbook collects the output tables in a browsable format.
     workbook_path = d01 / "v2_integrated_publication_tables.xlsx"
     excel_success, excel_message = create_excel_workbook(table_map, workbook_path)
 

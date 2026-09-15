@@ -50,7 +50,9 @@ for part in '$Key'.split('.'):
 print(value)
 "@
 
-    return (& $Python -c $Code).Trim()
+    $Result = & $Python -c $Code
+    if ($LASTEXITCODE -ne 0) { throw "Could not read configuration: $ConfigPath" }
+    return ($Result | Out-String).Trim()
 }
 
 function Run-Step {
@@ -69,7 +71,8 @@ function Run-Step {
     Write-Host "Step $StepNumber`: $Name"
     Write-Host "============================================================"
 
-    & $Python $Script --config $Config
+    $ScriptPath = Join-Path $PSScriptRoot $Script
+    & $Python $ScriptPath --config $Config
 
     if ($LASTEXITCODE -ne 0) {
         throw "Step $StepNumber failed: $Name"
@@ -85,6 +88,8 @@ Write-Host "Steps: $StartAt to $StopAt"
 if (!(Test-Path $Config)) {
     throw "Config file not found: $Config"
 }
+$Config = (Resolve-Path -LiteralPath $Config).Path
+if ($StartAt -lt 1 -or $StopAt -gt 6 -or $StartAt -gt $StopAt) { throw "Steps must be an ordered range from 1 to 6" }
 
 $OutputRoot = Get-ConfigValue -ConfigPath $Config -Key "output_root"
 Write-Host "Output root: $OutputRoot"

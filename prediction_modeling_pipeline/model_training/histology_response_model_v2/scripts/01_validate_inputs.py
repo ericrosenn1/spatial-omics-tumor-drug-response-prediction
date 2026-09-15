@@ -14,9 +14,6 @@ Scientific context:
     records missing inputs and readable clinical file dimensions before expensive
     image or neural-network steps are attempted.
 
-Documentation safety:
-    Documentation edits should not change executable behavior, thresholds, paths,
-    schemas, model settings, or outputs.
 """
 
 

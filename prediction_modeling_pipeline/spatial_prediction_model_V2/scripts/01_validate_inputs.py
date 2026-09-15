@@ -17,13 +17,6 @@ Scientific role:
     downstream modeling analysis by making input assumptions explicit before any
     response-prediction model is trained or evaluated.
 
-Documentation polish marker:
-    SPATIAL_PREDICTION_MODEL_V2_STEP01_DOC_POLISH_V1
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments, section
-    headers, and docstrings may be added, but executable logic, imports, constants,
-    paths, thresholds, schemas, validation rules, and outputs must remain unchanged.
 """
 
 

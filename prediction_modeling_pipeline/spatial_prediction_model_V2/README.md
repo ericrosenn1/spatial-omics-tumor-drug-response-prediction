@@ -1,210 +1,55 @@
-# Spatial Prediction Model V2
+# Spatial treatment-response models
 
-`spatial_prediction_model_V2` is the current governed spatial prediction model used in the downstream prediction-modeling layer of the spatial omics tumor drug response project.
+Fit pooled and treatment-specific regressors to spatial features and prior-adjusted response targets. This is the maintained, self-contained spatial modeling implementation.
 
-The pipeline starts from a completed `teacher_builder` handoff and asks whether spatial biology features explain treatment-response residuals beyond treatment-prior expectations. It is designed for interpretable residual modeling, biological mechanism discovery, treatment-specific validation, and downstream reporting. It is not intended to make clinical treatment recommendations.
+## Inputs and execution
 
-## Overview
+Prepare the [included development inputs](../teacher_builder/README.md) first. The input directory contains `model_input_numeric.csv`, `visium_fused_teacher_table.tsv`, and the ordered `feature_manifest.csv`.
 
-The V2 pipeline uses spatial feature tables, fused teacher labels, treatment priors, and governed sample-treatment training data to model prior-adjusted response residuals. Instead of treating treatment identity alone as the final explanation, the workflow tests whether spatial tumor architecture, immune context, stromal organization, metabolic state, accessibility, motifs, hotspots, gradients, and other spatial biology features are associated with above-prior or below-prior response evidence.
-
-The primary outputs are residual spatial biology models, treatment-level model validation results, recurrent biology themes, interpretation tables, publication-support tables, and final QC reports. Generated outputs are local artifacts and are not tracked in GitHub.
-
-The [corrected evaluation and prediction contract](docs/corrected_evaluation_and_prediction.md) documents durable Step09 recovery, the separate grouped evaluation, explicit precomputed-teacher entry point, reloadable predictors, and tested external-scoring interfaces. Conditional development validation, independent held-out evaluation, fitted-model predictions and signed-alignment scores remain distinct result types.
-
-## Relationship to other modules
-
-`spatial_prediction_model_V2` is downstream of:
-
-```text
-prediction_modeling_pipeline/teacher_builder/
-spatial_feature_identification_pipeline/
-```
-
-It is upstream of:
-
-```text
-prediction_modeling_pipeline/prediction_interpretation_model/
-prediction_modeling_pipeline/spatial_transfer_inference_model/
-```
-
-The superseded spatial-model implementation is available in Git history; V2 is the maintained implementation.
-
-## Expected input
-
-The main input is a completed teacher-builder handoff folder containing prediction-ready tables. A typical handoff includes files such as:
-
-```text
-model_input_numeric.csv
-visium_fused_teacher_table.tsv
-feature_manifest.csv
-prediction_ready_training_table.tsv
-```
-
-The exact source paths should be controlled by command-line arguments or configuration files. Machine-specific local paths should not be committed to GitHub.
-
-## Repository layout
-
-```text
-spatial_prediction_model_V2/
-├── README.md
-├── .gitignore
-├── .gitattributes
-├── configs/
-├── examples/
-├── scripts/
-├── src/
-├── tests/
-└── outputs/        # generated locally; not committed
-```
-
-Expected source folders:
-
-```text
-scripts/        numbered workflow scripts and the main orchestrator
-src/spm_v2/     reusable package code for V2 logic
-configs/        reusable or example configuration files
-examples/       example launch scripts for smoke and full runs
-tests/          lightweight tests or smoke checks
-```
-
-Generated folders such as `outputs/`, `logs/`, `local/`, `archive/`, `backup/`, and temporary run folders should remain local and should not be committed.
-
-## Pipeline steps
-
-The V2 workflow is organized as numbered stages run by the main orchestrator:
-
-```text
-00_run_spatial_prediction_model_v2.py
-```
-
-Major pipeline functions include:
-
-1. Input validation
-2. Modeling dataset construction
-3. Probability baseline modeling
-4. Pair-level residual modeling
-5. Residual biology registry construction
-6. Broad residual model training
-7. Filtered per-treatment residual models
-8. Tiered residual model curation
-9. Label-shuffle validation
-10. Integrated interpretation package generation
-11. Publication table generation
-12. Output QC
-
-These steps validate the input handoff, build model-ready sample-treatment tables, model residual response signals, curate treatment-specific models, validate selected models against shuffled-label controls, and package final source-of-truth outputs for interpretation.
-
-## Smoke run
-
-A smoke run is a lightweight end-to-end check. It is intended to confirm that the code can execute, required inputs are visible, and output structure is created. It is not a full biological validation.
-
-From the `spatial_prediction_model_V2` folder:
+Run from the repository root:
 
 ```powershell
-python .\scripts\00_run_spatial_prediction_model_v2.py `
-    --mode smoke `
-    --handoff-root "<path-to-teacher-builder-handoff>" `
-    --max-workers 2 `
-    --open-output
+python prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/00_run_spatial_prediction_model_v2.py --mode full --handoff-root local/precomputed_handoff --output-root local/spatial_model --max-workers 2 --full-step09-n-shuffles 1000 --full-step09-n-repeats 5
+if ($LASTEXITCODE -ne 0) { throw "Spatial modeling failed" }
 ```
 
-Use the smoke run before running the full cohort workflow.
+Use a new output folder. Full mode requires 1,000 permutations and five repeated 80:20 splits; reduced settings are rejected. `--mode smoke` uses smaller screening/validation settings for execution checks, not scientific reproduction. For a short data-independent test, run `python scripts/run_smoke.py --output local/smoke` instead.
 
-## Full run
+The runner keeps the active Python interpreter; `--python` is an explicit override. Two validation workers are the default. Each worker uses one XGBoost thread.
 
-A full run performs the governed production workflow, including label-shuffle validation.
+## Stages and model definitions
+
+| Steps | Purpose |
+|---|---|
+| 01–02 | Validate matching inputs, build pooled residual data and treatment eligibility |
+| 03–04 | Pooled response-estimate and residual models, grouped by section |
+| 05 | Select biological spatial predictors and exclude technical fields |
+| 06 | Model section-level residual summaries |
+| 07–08 | Screen treatment-specific models and select the permutation-test family |
+| 09 | Within-treatment conditional permutation test with resumable numerical blocks |
+| 10–12 | Feature interpretation tables, reporting and output QC |
+
+“Registry” in filenames means the selected spatial feature list. “Tier 1” identifies the candidates meeting the Step 08 permutation-test criteria; it is not a clinical evidence grade.
+
+Full pooled models use five section-grouped 80:20 splits and 150/200 trees for the response-estimate/residual targets. Treatment-specific screening uses ten 80:20 splits, up to 60 training-selected predictors and 120 trees. Validation uses 80 trees. Common XGBoost settings are depth 2, learning rate 0.03, subsample 0.85, feature subsample 0.80, squared-error loss and histogram tree construction.
+
+The development eligibility table requires at least 60 sections, residual SD 0.02, range 0.08 and ten distinct targets. Reported feature/model counts are outcomes, not hardcoded memberships.
+
+Step 09 fixes the upstream-selected feature and treatment families, while repeating feature ranking, imputation and model fitting inside each split. It uses (1 + exceedances)/(1 + permutations), counts undefined null statistics as exceedances, and applies Benjamini–Hochberg correction over the complete selected family. Acceptance requires q <= 0.10, observed mean correlation above the null 95th percentile, and positive mean RMSE improvement. This is conditional validation, not an independent test of upstream discovery.
+
+## Save models and predict new samples
+
+Export fitted models with their selected features, priors and preprocessing:
 
 ```powershell
-python .\scripts\00_run_spatial_prediction_model_v2.py `
-    --mode full `
-    --handoff-root "<path-to-teacher-builder-handoff>" `
-    --max-workers 2 `
-    --full-step09-n-shuffles 1000 `
-    --full-step09-n-repeats 5 `
-    --open-output
+python prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/14_fit_predictor_bundles.py --run-root local/spatial_model --teacher-root local/precomputed_handoff --raw-feature-table YOUR_DEVELOPMENT_STEP09_TABLE --output local/fitted_models
+if ($LASTEXITCODE -ne 0) { throw "Model export failed" }
+python prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/15_predict_spatial_features.py --bundles local/fitted_models --features YOUR_NEW_STEP09_TABLE --representation raw_reference --mode external --output local/new_predictions.tsv --contributions local/new_contributions.tsv
+if ($LASTEXITCODE -ne 0) { throw "Prediction failed" }
 ```
 
-Adjust shuffle and repeat settings only when intentionally changing the validation burden. Full runs may take longer and may create large output folders.
+The raw development Step 09 table supplies the saved reference transformations. It is produced by spatial extraction and is not the normalized 661-feature modeling table. `--existing-bundles` attaches that reference to saved fitted estimators without refitting them.
 
-## Main output concepts
+Missing required columns fail. Explicit missing measurements use the saved imputer and retain coverage information. Unsupported omitted extraction fields require a source-hash-bound `--raw-missingness-manifest`; do not fill them arbitrarily. External data never fit a new normalization or feature-selection rule.
 
-A successful full run produces local outputs such as:
-
-```text
-validated input reports
-modeling dataset tables
-probability baseline outputs
-pair-level residual tables
-residual biology registry tables
-broad residual model outputs
-per-treatment residual model outputs
-tiered model curation tables
-label-shuffle validation reports
-integrated interpretation package
-publication-support tables
-final QC reports
-```
-
-These outputs are designed to support downstream biological interpretation and reporting. They are not committed to GitHub by default.
-
-## Source-of-truth role
-
-A completed V2 full run is the source-of-truth input for the downstream `prediction_interpretation_model`. The interpretation layer should consume completed V2 outputs; it should not rerun V2, perform open model selection, or use deprecated prediction-interpretation outputs as source truth.
-
-## GitHub policy
-
-Commit:
-
-```text
-README.md
-.gitignore
-.gitattributes
-scripts/
-src/
-configs/ example or reusable configs
-examples/
-tests/
-small durable documentation
-```
-
-Do not commit:
-
-```text
-outputs/
-logs/
-local/
-archive/
-backup/
-private/
-temp/
-raw data
-large CSV/TSV result tables
-Excel workbooks
-figures
-PDFs
-ZIP packages
-model artifacts
-patch backups
-combined code/data bundles
-```
-
-Generated outputs should be regenerated locally from the code and required input data, or archived externally through an intentional data-release strategy.
-
-## Interpretation caveats
-
-The V2 pipeline models associations between spatial biology features and prior-adjusted treatment-response residuals. These models support biological interpretation and hypothesis generation. They do not establish causality and do not provide clinical treatment recommendations.
-
-## Recommended reviewer path
-
-For review, start with:
-
-```text
-README.md
-examples/run_smoke.ps1
-examples/run_full.ps1
-scripts/00_run_spatial_prediction_model_v2.py
-src/spm_v2/
-```
-
-Then inspect the numbered scripts and final QC outputs from a local run if outputs are available.
+Fitted residual predictions are separate from [weighted feature scores](../spatial_transfer_inference_model/README.md). See the [evaluation contract](docs/corrected_evaluation_and_prediction.md) for the separately implemented grouped evaluation and independently accepted-model exporter. Serialized models should only be loaded from trusted sources.

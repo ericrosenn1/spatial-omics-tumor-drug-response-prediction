@@ -18,7 +18,6 @@ Source-truth policy:
 """
 
 # =============================================================================
-# PIM_DOCS_PATCH: RUN AND MAINTENANCE INSTRUCTIONS
 # =============================================================================
 # Run numbered scripts through 00_run_prediction_interpretation_model.py unless
 # debugging a single step. Treat the V2 full-run root as read-only source truth.
@@ -28,7 +27,7 @@ Source-truth policy:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: imports and dependencies
+# imports and dependencies
 # =============================================================================
 # Keep imports explicit and standard-library-first where practical. The pipeline
 # expects local scripts to run from the scripts directory or through the orchestrator.
@@ -65,7 +64,7 @@ from _pim_utils import (
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: functions
+# functions
 # =============================================================================
 # Functions are intentionally small enough to support reruns, QC tracing, and
 # clear failure messages when upstream source contracts are incomplete.
@@ -73,7 +72,6 @@ from _pim_utils import (
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments for this script.
     Defaults preserve local project paths while allowing explicit overrides."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     parser = argparse.ArgumentParser()
     parser.add_argument("--project-root", default=None)
     parser.add_argument("--model-root", default="")
@@ -87,7 +85,6 @@ def parse_args() -> argparse.Namespace:
 def required_file(path: Path) -> Path:
     """Assert that an upstream file exists and return its path.
     Provides clear failure messages when a pipeline contract is incomplete."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if not path.exists():
         raise FileNotFoundError(f"Required upstream file missing: {path}")
     return path
@@ -96,7 +93,6 @@ def required_file(path: Path) -> Path:
 def copy_if_exists(src: Path, dst: Path) -> bool:
     """Copy an upstream file when it exists.
     Returns a boolean so final-output manifests can track copied artifacts."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if not src.exists():
         return False
     ensure_dir(dst.parent)
@@ -107,7 +103,6 @@ def copy_if_exists(src: Path, dst: Path) -> bool:
 def figure_bar(df: pd.DataFrame, x_col: str, y_col: str, title: str, xlabel: str, ylabel: str, path: Path, n: int = 20) -> bool:
     """Create a horizontal bar figure from a table.
     Returns False when required columns or numeric data are unavailable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if df.empty or x_col not in df.columns or y_col not in df.columns:
         return False
 
@@ -133,7 +128,6 @@ def figure_bar(df: pd.DataFrame, x_col: str, y_col: str, title: str, xlabel: str
 def figure_hist(df: pd.DataFrame, col: str, title: str, xlabel: str, path: Path) -> bool:
     """Create a histogram figure from a numeric column.
     Uses matplotlib's noninteractive backend for reproducible batch runs."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if df.empty or col not in df.columns:
         return False
     vals = pd.to_numeric(df[col], errors="coerce").dropna()
@@ -155,7 +149,6 @@ def figure_hist(df: pd.DataFrame, col: str, title: str, xlabel: str, path: Path)
 def figure_heatmap(matrix: pd.DataFrame, title: str, path: Path, max_rows: int = 35) -> bool:
     """Create a heatmap figure from a matrix table.
     Limits rows when needed so final figures remain readable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if matrix.empty or matrix.shape[1] < 2:
         return False
 
@@ -188,7 +181,6 @@ def figure_heatmap(matrix: pd.DataFrame, title: str, path: Path, max_rows: int =
 def make_excel(path: Path, sheets: List[tuple[str, pd.DataFrame]]) -> None:
     """Write publication tables to an Excel workbook.
     Sanitizes sheet names and prevents duplicate sheet-name collisions."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     ensure_dir(path.parent)
     with pd.ExcelWriter(path, engine="openpyxl") as writer:
         used = set()
@@ -207,7 +199,6 @@ def make_excel(path: Path, sheets: List[tuple[str, pd.DataFrame]]) -> None:
 def build_final_table_manifest(publication_dir: Path) -> pd.DataFrame:
     """Helper routine for this prediction_interpretation_model script.
     Keeps data movement, QC, or reporting behavior explicit and auditable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     rows = []
     for path in sorted(publication_dir.glob("*.tsv")):
         try:
@@ -230,14 +221,13 @@ def build_final_table_manifest(publication_dir: Path) -> pd.DataFrame:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: main entry point
+# main entry point
 # =============================================================================
 # The main function wires inputs, output folders, QC checks, reports, and terminal summaries.
 
 def main() -> int:
     """Run the script's command-line workflow.
     Writes outputs, QC checks, summaries, and terminal status messages."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     args = parse_args()
     started = dt.datetime.now()
     output_root = Path(args.output_root)
@@ -520,10 +510,9 @@ def main() -> int:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: command-line guard
+# command-line guard
 # =============================================================================
 # Keep this guard so scripts can be imported for testing without executing the step.
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -1,6 +1,5 @@
-# Tested numerical/reference versions; does not modify the research environment.
-# pyUCell 0.6 declares NumPy<2; use a compatible isolated reviewer environment.
-# The research environment is left intact; fixed-output regression checks cover this choice.
+# Tested numerical/reference versions for an isolated Python 3.12 environment.
+# PyUCell 0.6 declares NumPy<2; fixed-output regression checks cover this constraint.
 numpy==1.26.4
 pandas==2.3.3
 scipy==1.17.1
@@ -45,7 +44,7 @@ xarray-spatial==0.5.2
 tifffile==2025.10.16
 fast-array-utils==1.2.0
 
-# Remaining transitive versions recorded from the passing Python 3.12 reviewer install.
+# Remaining transitive versions recorded from the tested Python 3.12 installation.
 # pip is the installer; the maintained V2 package is installed through a relative editable requirement.
 accessible-pygments==0.0.5
 aiobotocore==3.9.1

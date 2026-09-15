@@ -17,13 +17,6 @@ Scientific role:
     treatment keys, binary response labels, conflict removal, deduplication,
     and explicit gene-feature provenance before any classifier is trained.
 
-Documentation polish marker:
-    EXPRESSION_MODEL_V2_STEP02_DOC_POLISH_V1
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic must
-    remain unchanged.
 """
 
 

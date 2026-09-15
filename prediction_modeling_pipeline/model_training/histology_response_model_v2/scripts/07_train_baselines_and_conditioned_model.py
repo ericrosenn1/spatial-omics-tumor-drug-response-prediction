@@ -16,9 +16,6 @@ Scientific context:
     an essential control, while image_only and image_treatment test morphology
     and morphology plus treatment context under patient-level splits.
 
-Documentation safety:
-    Documentation edits should not change executable behavior, thresholds, paths,
-    schemas, model settings, or outputs.
 """
 
 

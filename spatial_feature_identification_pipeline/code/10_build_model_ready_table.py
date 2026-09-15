@@ -61,7 +61,6 @@ from lib.config import load_config, validate_config
 
 
 # =========================
-# STRUCTURE_REGION_CONSENSUS_PATCH_V1
 # Config constants
 # =========================
 

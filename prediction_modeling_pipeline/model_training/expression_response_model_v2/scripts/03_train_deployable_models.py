@@ -19,13 +19,6 @@ Scientific role:
     probability-extremeness, and reliability checks before being approved for
     teacher use.
 
-Documentation polish marker:
-    EXPRESSION_MODEL_V2_STEP03_DOC_POLISH_V1
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic must
-    remain unchanged.
 """
 
 

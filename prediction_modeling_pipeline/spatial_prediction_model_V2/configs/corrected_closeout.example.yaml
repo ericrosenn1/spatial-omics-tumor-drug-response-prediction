@@ -1,4 +1,4 @@
-# Local paths supplied by the reviewer; no raw data or credentials are included.
+# Local paths supplied by the user; no raw data or credentials are included.
 teacher:
   table: "<corrected_teacher.tsv.gz>"
   sha256: "<SHA256 from the versioned corrected-artifact manifest>"

@@ -19,9 +19,6 @@ Scientific role:
     helping distinguish spatial morphology signal from treatment-prior or drug
     identity effects.
 
-Documentation polish marker:
-    SPATIAL_PREDICTION_MODEL_V2_STEP03_DOC_POLISH_V1
-
 Reporting correction (2026-09-13):
     Group gain totals now weight the conditional-on-selection mean by selection
     frequency, so unselected fits contribute zero. Model fitting, split logic,
