@@ -10,8 +10,7 @@ if ($Root -eq "") {
 }
 
 if ($Python -eq "") {
-    $Candidate = "python"
-    if ($Candidate -ne "" -and (Test-Path $Candidate)) { $Python = $Candidate } else { $Python = "python" }
+    $Python = "python"
 }
 
 $PyFiles = @(
@@ -47,22 +46,15 @@ foreach ($Rel in $PyFiles) {
 
 Push-Location $Root
 try {
-    & $Python -m py_compile @PyFiles
-    if ($LASTEXITCODE -ne 0) { throw "py_compile failed" }
-    & $Python -c "import yaml, pathlib; [yaml.safe_load(pathlib.Path(p).read_text(encoding='utf-8')) for p in ['expression_response_model_v2/configs/expression_response_model_v2.yaml','histology_response_model_v2/configs/histology_response_model_v2.yaml']]; print('YAML parse: PASS')"
+    & $Python -c "import pathlib, sys; [compile(pathlib.Path(p).read_text(encoding='utf-8-sig'), p, 'exec') for p in sys.argv[1:]]; print('Python syntax: PASS')" @PyFiles
+    if ($LASTEXITCODE -ne 0) { throw "Python syntax check failed" }
+    & $Python -c "import yaml, pathlib; [yaml.safe_load(pathlib.Path(p).read_text(encoding='utf-8-sig')) for p in ['expression_response_model_v2/configs/expression_response_model_v2.example.yaml','histology_response_model_v2/configs/histology_response_model_v2.example.yaml']]; print('Example YAML parse: PASS')"
     if ($LASTEXITCODE -ne 0) { throw "YAML parse failed" }
-    & $Python -c "import pandas as pd, pathlib; paths=['expression_response_model_v2/outputs/deployable_CH1/model_index.tsv','expression_response_model_v2/outputs/deployable_CH1/model_index_approved.tsv','histology_response_model_v2/outputs/histology_v2/07_models/model_comparison.tsv','histology_response_model_v2/outputs/histology_v2/09_audit/histology_model_index.tsv']; [pd.read_csv(p, sep='\t', nrows=5) for p in paths if pathlib.Path(p).exists()]; print('Key TSV read check: PASS')"
-    if ($LASTEXITCODE -ne 0) { throw "Key TSV read failed" }
 } finally {
     Pop-Location
 }
 
-Get-ChildItem -LiteralPath (Join-Path $Root "expression_response_model_v2\scripts"), (Join-Path $Root "histology_response_model_v2\scripts") -Recurse -Force |
-    Where-Object { $_.Name -eq "__pycache__" -or $_.Extension -in @(".pyc", ".pyo") } |
-    ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force }
-
-Write-Host "py_compile: PASS"
-Write-Host "Smoke test: PASS"
+Write-Host "Source/configuration checks: PASS (no training or numerical validation performed)"
 
 
 

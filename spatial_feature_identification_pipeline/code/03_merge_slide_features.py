@@ -42,7 +42,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from lib.config import load_config, validate_config
+from lib.config import load_config, validate_config, require_successful_stage
 
 
 # =========================
@@ -268,6 +268,7 @@ def main():
     )
 
     summary_path.write_text(summary_text, encoding="utf-8")
+    require_successful_stage(merge_report, "Feature merge", merge_report_path)
 
     print("DONE")
     print("Merged table:", merged_path)

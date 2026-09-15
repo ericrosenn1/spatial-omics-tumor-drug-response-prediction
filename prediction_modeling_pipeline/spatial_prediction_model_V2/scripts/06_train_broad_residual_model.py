@@ -15,14 +15,6 @@ Scientific role:
     treatment-identity dummy variables. Its outputs identify candidate spatial
     phenotypes and biological themes for later treatment-specific analysis.
 
-Documentation polish marker:
-    SPATIAL_PREDICTION_MODEL_V2_STEP06_DOC_POLISH_V2
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic,
-    imports, constants, thresholds, hyperparameters, feature-selection
-    rules, output filenames, and return codes must remain unchanged.
 """
 
 

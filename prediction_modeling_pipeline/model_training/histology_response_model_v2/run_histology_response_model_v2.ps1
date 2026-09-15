@@ -27,14 +27,10 @@ param(
 $ErrorActionPreference = "Stop"
 
 if ($Python -eq "") {
-    $ProjectRoot = ""
-    $Candidate = ""
-    if ($Candidate -ne "" -and (Test-Path $Candidate)) {
-        $Python = $Candidate
-    } else {
-        $Python = "python"
-    }
+    $Python = "python"
 }
+$Config = (Resolve-Path -LiteralPath $Config -ErrorAction Stop).Path
+if ($StartAt -lt 0 -or $StopAt -gt 9 -or $StartAt -gt $StopAt) { throw "Steps must be an ordered range from 0 to 9" }
 
 # Canonical production workflow: steps 00 through 09 run in dependency order.
 $Steps = @(
@@ -65,7 +61,8 @@ foreach ($Step in $Steps) {
     Write-Host "Step $($Step.N): $($Step.Name)"
     Write-Host "============================================================"
 
-    & $Python $Step.Script --config $Config
+    $ScriptPath = Join-Path $PSScriptRoot $Step.Script
+    & $Python $ScriptPath --config $Config
     if ($LASTEXITCODE -ne 0) {
         throw "Step $($Step.N) failed: $($Step.Name)"
     }

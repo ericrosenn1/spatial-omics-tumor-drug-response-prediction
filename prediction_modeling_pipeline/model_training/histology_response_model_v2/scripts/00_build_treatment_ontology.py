@@ -15,9 +15,6 @@ Scientific context:
     generic therapy labels. The downstream teacher model should learn named
     treatment-response structure rather than inconsistent source text.
 
-Documentation safety:
-    Documentation edits should not change executable behavior, thresholds, paths,
-    schemas, model settings, or outputs.
 """
 
 

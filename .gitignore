@@ -189,7 +189,7 @@ visium_cohort_clean/
 !**/docs/**/*.jpeg
 
 # ============================================================
-# ChatGPT, transcript, bundle, and scratch artifacts
+# Transcripts, bundles, and scratch artifacts
 # ============================================================
 Pasted text*.txt
 Pasted*.txt
@@ -303,6 +303,9 @@ prediction_modeling_pipeline/spatial_transfer_inference_model/configs/resolved_p
 project_profile.local.yaml
 
 # Local review/staging files
+git_status_full.txt
+**/outputs_*/
+manuscript_version_audit_*/
 local_path_files_to_fix.txt
 staged_files_review.txt
 

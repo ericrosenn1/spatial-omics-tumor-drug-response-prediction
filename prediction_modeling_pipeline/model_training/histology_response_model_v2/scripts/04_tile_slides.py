@@ -16,9 +16,6 @@ Scientific context:
     tissue filter is intentionally simple and auditable so failed or low-content
     tiles can be traced in later QC steps.
 
-Documentation safety:
-    Documentation edits should not change executable behavior, thresholds, paths,
-    schemas, model settings, or outputs.
 """
 
 

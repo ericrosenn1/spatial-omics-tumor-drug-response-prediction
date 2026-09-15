@@ -13,18 +13,11 @@ Project context:
 
 Scientific role:
     This step does not modify modeling inputs or train a model. It is an audit
-    and reporting layer that helps reviewers determine whether the governed
-    teacher labels are usable for downstream spatial prediction. The checks focus
+    and reporting layer that determines whether the response targets meet
+    requirements for downstream spatial prediction. The checks focus
     on exact 0/1 saturation, treatment-prior availability, residual-target
     availability, label-quality fields, and excessive excluded labels.
 
-Documentation polish marker:
-    TEACHER_BUILDER_STEP06_DOC_POLISH_V1
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments, section
-    headers, and docstrings may be added, but executable logic, paths, thresholds,
-    schemas, figure definitions, and outputs must remain unchanged.
 """
 
 
@@ -180,7 +173,7 @@ def make_figures(teacher, training, manifest, out_dir):
     # =========================
     # Label-quality counts make weak or excluded labels visible before downstream modeling.
 
-    # Label-quality flags expose weak, clipped, or excluded labels for reviewer triage.
+    # Label-quality flags expose weak, clipped, or excluded labels for QC review.
     if "label_quality_flag" in teacher.columns:
         counts = teacher["label_quality_flag"].astype(str).value_counts()
         plt.figure(figsize=(7, 5))
@@ -417,7 +410,7 @@ def main():
     # =========================
     # QC check writer helper
     # =========================
-    # Each check records a boolean result, observed value, and reviewer-facing detail.
+    # Each check records a boolean result, observed value, and human-readable detail.
 
     def add_check(name, passed, value, detail):
         # Store every check as a row for qc_checks.tsv.
@@ -554,7 +547,7 @@ def main():
     for p in sorted(out_dir.glob("fig_*.png")):
         lines.append(f"  {p.name}")
 
-    # The text summary is the reviewer-facing QC artifact.
+    # The text summary is the human-readable QC artifact.
     text = "\n".join(lines)
     (out_dir / "qc_summary.txt").write_text(text, encoding="utf-8")
     (out_dir / "teacher_qc_decision.txt").write_text(decision, encoding="utf-8")

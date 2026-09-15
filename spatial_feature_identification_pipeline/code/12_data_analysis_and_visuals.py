@@ -2,24 +2,9 @@
 Script: 12_data_analysis_and_visuals.py
 
 Purpose:
-    Create Visium region overlays from canonical Step 05 multi axis transcriptome outputs.
-
-Project context:
-    spatial_feature_identification_pipeline Step 12 visualization and review layer.
-
-Documentation status:
-    This active script has been documentation polished for GitHub review, publication
-    methods support, and future maintenance. It remains the canonical Step 12
-    visualization script.
-
-Expected use:
-    1. Run this script as the Step 12 visualization and review layer.
-    2. Read the comments and docstrings when auditing overlay implementation details.
-    3. Use the reports in code/_documentation_audit to confirm documentation only edits.
-
-Safety notes:
-    Documentation polishing used compile checks and AST comparisons with docstrings
-    ignored. Added material is limited to comments, section headers, and docstrings.
+    Create Visium region overlays from Step 05 multi-axis transcriptome outputs.
+    Render structural, functional and metabolic annotations with their spatial
+    coordinates for inspection alongside the numerical section summaries.
 """
 
 
@@ -79,7 +64,6 @@ from lib.config import load_config, validate_config
 # Pipeline input and output locations
 # =========================
 
-# STRUCTURE_REGION_CONSENSUS_PATCH_V1
 # Step 12 reads canonical Step 05 labels rather than recalculating labels.
 INPUT_SUBDIR = "output_05_build_multi_axis_transcriptome_labels"
 # Overlay review products are written under the Step 12 output tree.
@@ -1624,5 +1608,3 @@ if __name__ == "__main__":
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         main()
-
-

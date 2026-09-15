@@ -16,10 +16,6 @@ Scientific context:
     teacher_builder uses the audited histology model as a conservative base
     teacher for spatial prediction.
 
-Documentation safety:
-    This file has been documented for readability and auditability. Documentation
-    edits should not change executable behavior, thresholds, paths, schemas,
-    model settings, or outputs.
 """
 
 

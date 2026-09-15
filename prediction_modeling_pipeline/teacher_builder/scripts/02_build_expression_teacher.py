@@ -17,9 +17,6 @@ Scientific role:
     scoring mode, and prior-only fallback information so later fusion can shrink
     and audit teacher labels conservatively.
 
-Documentation polish marker:
-    TEACHER_BUILDER_STEP02_DOC_POLISH_V1
-
 Correction contract:
     Reproduce the corrected September teacher using canonical retained raw
     spots, Ensembl IDs, ordered model features, and saved calibration. Existing

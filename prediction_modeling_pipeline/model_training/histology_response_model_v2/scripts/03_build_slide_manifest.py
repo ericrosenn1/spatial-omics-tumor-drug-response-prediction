@@ -15,9 +15,6 @@ Scientific context:
     downstream tiling, patient-level splitting, leakage checks, and model audit
     all depend on this manifest.
 
-Documentation safety:
-    Documentation edits should not change executable behavior, thresholds, paths,
-    schemas, model settings, or outputs.
 """
 
 
@@ -145,8 +142,9 @@ def main():
         find_key_recursive(cfg, "tcia_download_dir")
         or find_key_recursive(cfg, "slide_root")
         or find_key_recursive(cfg, "slides_dir")
-        or r"C:\WSI_data\tcia_downloads"
     )
+    if not slide_root_raw:
+        raise ValueError("Configure paths.tcia_download_dir, slide_root, or slides_dir for whole-slide inputs.")
     slide_root = resolve_path(project_dir, slide_root_raw)
 
     # Step 03 uses the case label table as the clinical authority for patient/treatment/response metadata.

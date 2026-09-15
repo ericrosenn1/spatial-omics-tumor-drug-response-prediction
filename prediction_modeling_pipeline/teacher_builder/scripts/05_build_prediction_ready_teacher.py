@@ -20,9 +20,6 @@ Scientific role:
     quality fields, and numeric spatial covariates in reproducible tables so
     later models can learn from auditable teacher labels.
 
-Documentation polish marker:
-    TEACHER_BUILDER_STEP05_DOC_POLISH_V1
-
 Correction contract:
     Preserve teacher values and reject duplicate or missing sample identities
     before joining the numeric spatial handoff.

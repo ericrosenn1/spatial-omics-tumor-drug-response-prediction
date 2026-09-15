@@ -1,0 +1,3 @@
+# Main spatial workflow and deterministic tests (Python 3.12).
+# The existing filename is retained for installation compatibility.
+-r requirements-reviewer.txt

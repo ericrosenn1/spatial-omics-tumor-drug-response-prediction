@@ -22,9 +22,6 @@ Worker policy:
     Step 09 parallelizes across Tier 1 treatments and keeps XGBoost n_jobs=1
     inside each worker to avoid nested CPU oversubscription.
 
-Policy:
-    V2 production runs do not modify V1 scripts.
-    V2 production runs do not depend on V1 output files.
 """
 
 from __future__ import annotations
@@ -77,13 +74,9 @@ def open_path(path: Path) -> None:
 
 
 def resolve_python(user_python: str) -> str:
+    """Keep subprocesses in the active environment unless explicitly overridden."""
     if user_python:
         return user_python
-
-    candidate = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
-    if candidate.exists():
-        return str(candidate)
-
     return sys.executable
 
 
@@ -195,6 +188,9 @@ def main() -> int:
     parser.add_argument("--open-output", action="store_true")
     args = parser.parse_args()
 
+    if args.mode == "full" and (args.full_step09_n_shuffles != 1000 or args.full_step09_n_repeats != 5):
+        parser.error("Full mode requires 1000 permutations and 5 repeats; use smoke mode for reduced execution tests.")
+
     py = resolve_python(args.python)
     handoff_root = Path(args.handoff_root).resolve()
 
@@ -204,7 +200,7 @@ def main() -> int:
     stamp = time.strftime("%Y%m%d_%H%M%S")
 
     if args.output_root:
-        run_root = ensure_dir(args.output_root)
+        run_root = ensure_dir(Path(args.output_root).resolve())
     else:
         run_root = ensure_dir(V2_ROOT / "outputs" / f"v2_{args.mode}_run_{stamp}")
 
@@ -482,4 +478,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -17,8 +17,6 @@
 #   environment. It does not define model thresholds itself; those live in the
 #   YAML config and Python step scripts.
 #
-# Documentation polish marker:
-#   EXPRESSION_MODEL_V2_RUNNER_PS1_DOC_POLISH_V1
 #
 # Important:
 #   This documentation pass is intentionally non-behavioral. Comments may be
@@ -41,20 +39,13 @@ param(
 $ErrorActionPreference = "Stop"
 
 
-# Resolve the runner location and execute relative to the model folder.
+# Resolve scripts without changing the caller's working directory.
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
-Set-Location $Here
 
 
-# Prefer the project virtual environment; fall back to system python if needed.
+# Use the activated environment unless explicitly overridden.
 if ($Python -eq "") {
-    $ProjectRoot = ""
-    $Candidate = ""
-    if ($Candidate -ne "" -and (Test-Path $Candidate)) {
-        $Python = $Candidate
-    } else {
-        $Python = "python"
-    }
+    $Python = "python"
 }
 
 
@@ -62,6 +53,8 @@ if ($Python -eq "") {
 if (!(Test-Path $Config)) {
     throw "Config not found: $Config"
 }
+$Config = (Resolve-Path -LiteralPath $Config).Path
+if ($StartAt -lt 0 -or $StopAt -gt 5 -or $StartAt -gt $StopAt) { throw "Steps must be an ordered range from 0 to 5" }
 
 
 # Numbered pipeline contract.

@@ -3,8 +3,8 @@
 # Local machine-specific config files are ignored by Git.
 
 project_name: visium_cohort_clean
-input_root: YOUR_PROJECT_ROOT\Visium_samples\visium_cohort_clean
-output_root: YOUR_PROJECT_ROOT\spatial_feature_identification_pipeline\outputs
+input_root: Visium_samples/visium_cohort_clean
+output_root: local/spatial_features
 sample_glob: SAMPLE_*
 steps:
   validate_inputs: true
@@ -22,7 +22,7 @@ external_validation:
   hepatoblastoma:
     dataset_id: GSE261958
     cancer_type: hepatoblastoma
-    study_png_dir: outputs/_external_study_validation/hepatoblastoma/manual_comparison_SHORTLIST_20260504_061657/study_pngs_to_create
+    study_png_dir: YOUR_EXTERNAL_VALIDATION_ROOT/hepatoblastoma/study_images
     samples:
       H1190: SAMPLE_0012
       H391: SAMPLE_0026

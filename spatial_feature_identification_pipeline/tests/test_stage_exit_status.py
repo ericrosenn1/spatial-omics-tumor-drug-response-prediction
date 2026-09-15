@@ -93,3 +93,44 @@ def test_failed_required_clustering_cannot_create_single_cluster(monkeypatch):
     with pytest.raises(RuntimeError, match='Leiden clustering failed'):
         module.preprocess_adata(data)
     assert 'leiden' not in data.obs
+
+
+def test_too_small_input_cannot_receive_fabricated_cluster(monkeypatch):
+    import anndata
+    import numpy as np
+    module = load('small_clustering_step02', ROOT / 'code/02_process_samples.py')
+    data = anndata.AnnData(np.ones((2, 4), dtype=float))
+    for name in ['normalize_total', 'log1p', 'highly_variable_genes', 'scale']:
+        monkeypatch.setattr(module.sc.pp, name, lambda *args, **kwargs: None)
+    with pytest.raises(ValueError, match='Too few retained'):
+        module.preprocess_adata(data)
+    assert 'leiden' not in data.obs
+
+
+def test_msigdb_failure_cannot_silently_change_gene_sets(monkeypatch):
+    module = load('library_failure_step05', ROOT / 'code/05_build_multi_axis_transcriptome_labels.py')
+    monkeypatch.setattr(module, 'HAS_GSEAPY', True)
+    def failed_library():
+        raise OSError('network unavailable')
+    monkeypatch.setattr(module, 'Msigdb', failed_library)
+    with pytest.raises(RuntimeError, match='no gene-set substitution'):
+        module.load_external_libraries(75)
+
+
+def test_enabled_scoring_cannot_hide_missing_dependencies(monkeypatch):
+    from types import SimpleNamespace
+    module = load('scoring_failure_step05', ROOT / 'code/05_build_multi_axis_transcriptome_labels.py')
+    monkeypatch.setattr(module, 'HAS_UCELL', False)
+    with pytest.raises(RuntimeError, match='PyUCell is unavailable'):
+        module.compute_ucell_scores(SimpleNamespace(obs_names=pd.Index(['spot'])), {'program': ['G1', 'G2']}, True, 1)
+    monkeypatch.setattr(module, 'HAS_GSEAPY', False)
+    with pytest.raises(RuntimeError, match='GSEApy is unavailable'):
+        module.compute_gsva_scores(pd.DataFrame({'G1': [1, 2]}), {'program': ['G1']}, True, 1, 5000)
+
+
+@pytest.mark.parametrize('statuses', [[], ['failed'], ['ERROR'], ['missing_h5ad'], ['ok', 'failed'], ['skipped']])
+def test_sample_status_errors_cannot_report_stage_success(statuses):
+    from lib.config import require_successful_stage
+    with pytest.raises(RuntimeError, match='inspect'):
+        require_successful_stage([{'sample_id': str(i), 'status': status} for i, status in enumerate(statuses)], 'test stage', 'status.csv')
+    require_successful_stage([{'status': 'ok'}, {'status': 'already_present'}], 'test stage', 'status.csv')

@@ -20,9 +20,6 @@ Scientific role:
     and label-quality flags so downstream spatial models can use governed labels
     rather than unqualified raw teacher probabilities.
 
-Documentation polish marker:
-    TEACHER_BUILDER_STEP04_DOC_POLISH_V1
-
 Correction contract:
     Join verified sample identity and normalized full treatment key; display
     names remain metadata. Ambiguous duplicate identities fail explicitly.

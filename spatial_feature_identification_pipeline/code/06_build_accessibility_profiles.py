@@ -54,11 +54,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from lib.config import load_config, validate_config
+from lib.config import load_config, validate_config, require_successful_stage
 
 
 # =========================
-# STRUCTURE_REGION_CONSENSUS_PATCH_V1
 # Config constants
 # =========================
 
@@ -1341,6 +1340,7 @@ def main():
 
     summary_text = build_summary_text(status_df, access_df)
     summary_path.write_text(summary_text, encoding="utf-8")
+    require_successful_stage(status_df, "Accessibility", status_path)
 
     print()
     print("DONE")

@@ -59,7 +59,7 @@ PIPELINE_ROOT = CODE_ROOT.parent
 if str(CODE_ROOT) not in sys.path:
     sys.path.insert(0, str(CODE_ROOT))
 
-from lib.config import load_config, validate_config
+from lib.config import load_config, validate_config, require_successful_stage
 
 
 # =========================
@@ -131,7 +131,6 @@ HIGH_CONFIDENCE_CONCORDANCE = 0.60
 STRONG_MISMATCH_BEST_SCORE = 0.70
 LOW_SIGNAL_BEST_SCORE = 0.60
 
-# STRUCTURE_REGION_CONSENSUS_PATCH_V1
 # Raw spot-level structure labels are preserved, but downstream structural regions
 # use a cluster-consensus layer for coherent architecture interpretation.
 STRUCTURE_CONSENSUS_MIN_FRACTION = 0.50
@@ -620,7 +619,7 @@ def cap_gene_sets(gene_sets: dict[str, list[str]], max_terms: int) -> dict[str, 
 def load_external_libraries(max_reactome_terms: int, source: str = "auto") -> ExternalLibraries:
     """Load external sets or explicitly reproduce the existing curated fallback.
 
-    ``auto`` preserves the original MSigDB-then-fallback behavior. Selecting
+    ``auto`` requires the specified MSigDB release. Selecting
     ``fallback_curated_lite`` uses the same embedded genes without a network
     request, allowing runs whose metadata records that source to be reproduced.
     """
@@ -634,12 +633,7 @@ def load_external_libraries(max_reactome_terms: int, source: str = "auto") -> Ex
             source="fallback_curated_lite",
         )
     if not HAS_GSEAPY or Msigdb is None:
-        return ExternalLibraries(
-            hallmark=uppercase_gene_sets(FALLBACK_HALLMARK_GENESETS),
-            reactome=cap_gene_sets(uppercase_gene_sets(FALLBACK_REACTOME_GENESETS), max_reactome_terms),
-            status="gseapy_not_available_using_fallback",
-            source="fallback_curated_lite",
-        )
+        raise RuntimeError("GSEApy/MSigDB is required for the selected gene-set source; install the declared dependencies.")
 
     try:
         msig = Msigdb()
@@ -649,6 +643,8 @@ def load_external_libraries(max_reactome_terms: int, source: str = "auto") -> Ex
         hallmark = {k: v for k, v in hallmark.items() if k in HALLMARK_KEEP}
         reactome = keyword_filter_terms(reactome, REACTOME_KEYWORDS)
         reactome = cap_gene_sets(reactome, max_reactome_terms)
+        if not hallmark or not reactome:
+            raise ValueError("Selected MSigDB Hallmark/Reactome library is empty")
 
         return ExternalLibraries(
             hallmark=uppercase_gene_sets(hallmark),
@@ -658,12 +654,7 @@ def load_external_libraries(max_reactome_terms: int, source: str = "auto") -> Ex
         )
 
     except Exception as error:
-        return ExternalLibraries(
-            hallmark=uppercase_gene_sets(FALLBACK_HALLMARK_GENESETS),
-            reactome=cap_gene_sets(uppercase_gene_sets(FALLBACK_REACTOME_GENESETS), max_reactome_terms),
-            status=f"msigdb_failed_using_fallback: {type(error).__name__}: {error}",
-            source="fallback_curated_lite",
-        )
+        raise RuntimeError("MSigDB retrieval failed; no gene-set substitution was made. Use fallback_curated_lite only to reproduce a run explicitly using that library.") from error
 
 
 def filter_gene_sets_to_present(
@@ -856,7 +847,7 @@ def compute_ucell_scores(
         return out, "skipped"
 
     if not HAS_UCELL:
-        return out, "ucell_not_available"
+        raise RuntimeError("UCell scoring is enabled but PyUCell is unavailable")
 
     if not filtered:
         return out, "no_signatures"
@@ -878,12 +869,12 @@ def compute_ucell_scores(
                 out[sig] = pd.to_numeric(adata_uc.obs[col], errors="coerce").reindex(out.index).values
 
         if out.shape[1] == 0:
-            return out, "no_ucell_columns_found"
+            raise ValueError("UCell produced no score columns for available signatures")
 
         return out, "ok"
 
     except Exception as error:
-        return out, f"failed: {type(error).__name__}: {error}"
+        raise RuntimeError("Enabled UCell scoring failed") from error
 
 
 def parse_gseapy_scores(gsva_obj: Any, sample_names: list[str]) -> pd.DataFrame:
@@ -945,7 +936,7 @@ def compute_gsva_scores(
         return out, "skipped"
 
     if not HAS_GSEAPY:
-        return out, "gseapy_not_available"
+        raise RuntimeError("GSVA scoring is enabled but GSEApy is unavailable")
 
     if not filtered:
         return out, "no_gene_sets"
@@ -967,12 +958,12 @@ def compute_gsva_scores(
 
         parsed = parse_gseapy_scores(res, list(expr_df.index))
         if parsed.shape[1] == 0:
-            return parsed, "empty_output"
+            raise ValueError("GSVA produced no score columns for available gene sets")
 
         return parsed, "ok"
 
     except Exception as error:
-        return out, f"failed: {type(error).__name__}: {error}"
+        raise RuntimeError("Enabled GSVA scoring failed") from error
 
 
 def map_reactome_term(term: str) -> list[tuple[str, str]]:
@@ -1227,7 +1218,6 @@ def build_structure_labels(structure_scores: pd.DataFrame) -> pd.DataFrame:
 
 
 
-# STRUCTURE_REGION_CONSENSUS_PATCH_V1
 # =========================
 # Structure region consensus
 # =========================
@@ -2194,6 +2184,7 @@ def main() -> None:
             external=external,
         )
 
+        require_successful_stage(status_df, "Program-score merge", out_dir / "multi_axis_label_status.csv")
         print("DONE merge-only")
         print("Status:", out_dir / "multi_axis_label_status.csv")
         print("Slide summary:", out_dir / "multi_axis_slide_summary.csv")
@@ -2310,6 +2301,7 @@ def main() -> None:
             pd.DataFrame(status_rows).to_csv(out_dir / "multi_axis_label_status.csv", index=False)
 
     if args.per_sample_only:
+        require_successful_stage(status_rows, "Program scoring", out_dirs["per_sample_status"])
         print()
         print("DONE per-sample-only")
         print("Per-sample outputs written under:", out_dir)
@@ -2331,6 +2323,7 @@ def main() -> None:
 
     metadata = write_metadata(out_dir, args, external, status_df)
     summary_text = build_summary_text(status_df, slide_df, metadata)
+    require_successful_stage(status_df, "Program scoring", out_dir / "multi_axis_label_status.csv")
 
     print()
     print("DONE")

@@ -17,13 +17,6 @@ Scientific role:
     responder/non-responder counts, detected gene features, and treatments
     eligible for model training under the configured minimum support rules.
 
-Documentation polish marker:
-    EXPRESSION_MODEL_V2_STEP01_DOC_POLISH_V1
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic must
-    remain unchanged.
 """
 
 
@@ -187,7 +180,7 @@ def main():
 # =========================
 # Human-readable validation report
 # =========================
-# The text report gives reviewers a compact summary of cohort size, label
+# The text report provides a compact summary of cohort size, label
 # coverage, detected gene columns, and top eligible treatments.
 
     lines = []

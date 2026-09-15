@@ -18,7 +18,6 @@ Source-truth policy:
 """
 
 # =============================================================================
-# PIM_DOCS_PATCH: RUN AND MAINTENANCE INSTRUCTIONS
 # =============================================================================
 # Run numbered scripts through 00_run_prediction_interpretation_model.py unless
 # debugging a single step. Treat the V2 full-run root as read-only source truth.
@@ -28,7 +27,7 @@ Source-truth policy:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: imports and dependencies
+# imports and dependencies
 # =============================================================================
 # Keep imports explicit and standard-library-first where practical. The pipeline
 # expects local scripts to run from the scripts directory or through the orchestrator.
@@ -69,7 +68,7 @@ from _pim_utils import (
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: functions
+# functions
 # =============================================================================
 # Functions are intentionally small enough to support reruns, QC tracing, and
 # clear failure messages when upstream source contracts are incomplete.
@@ -77,7 +76,6 @@ from _pim_utils import (
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments for this script.
     Defaults preserve local project paths while allowing explicit overrides."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     parser = argparse.ArgumentParser()
     parser.add_argument("--project-root", default=None)
     parser.add_argument("--model-root", default="")
@@ -92,7 +90,6 @@ def parse_args() -> argparse.Namespace:
 def read_pair_minimal(index_df: pd.DataFrame, target_col: str) -> tuple[pd.DataFrame, str, str, str]:
     """Read only required pair-level columns from the large V2 table.
     Keeps signed-effect and sample-level steps memory-conscious."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     pair_path = source_path(index_df, "v2_pair_level_residual_dataset", prefer_copied=False)
     columns = read_header(pair_path)
 
@@ -118,7 +115,6 @@ def read_pair_minimal(index_df: pd.DataFrame, target_col: str) -> tuple[pd.DataF
 def load_spatial_features(index_df: pd.DataFrame, feature_names: Sequence[str]) -> tuple[pd.DataFrame, List[str]]:
     """Load requested spatial feature columns from the V2 spatial table.
     Returns only features present in the source table."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     spatial = read_source_table(index_df, "v2_spatial_features_broad_pool")
     sample_col = choose_col(spatial.columns, ["sample_id", "slide_id", "sample"], required=True, label="spatial sample column")
     if sample_col != "sample_id":
@@ -136,7 +132,6 @@ def load_spatial_features(index_df: pd.DataFrame, feature_names: Sequence[str]) 
 def normalize_importance_by_treatment(df: pd.DataFrame) -> pd.DataFrame:
     """Normalize feature importance within each treatment.
     Combines SHAP and gain evidence into comparable treatment-level weights."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     out = df.copy()
     if "mean_abs_shap" in out.columns:
         out["importance_raw"] = pd.to_numeric(out["mean_abs_shap"], errors="coerce")
@@ -159,7 +154,6 @@ def compute_treatment_feature_effects(
 ) -> pd.DataFrame:
     """Compute signed feature effects per treatment.
     Weights direction by model importance and feature-target association."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     rows: List[dict] = []
 
     feature_meta_cols = [
@@ -233,7 +227,6 @@ def compute_treatment_feature_effects(
 def compute_theme_effects(feature_effects: pd.DataFrame) -> pd.DataFrame:
     """Aggregate signed feature effects into biology-theme effects.
     Produces treatment-theme directionality for cards and mechanism atlas."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if feature_effects.empty:
         return pd.DataFrame()
 
@@ -264,7 +257,6 @@ def compute_theme_effects(feature_effects: pd.DataFrame) -> pd.DataFrame:
 def compute_broad_effects(index_df: pd.DataFrame, feature_dict: pd.DataFrame, spatial: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Compute broad sample-level signed effects.
     Summarizes feature and theme directionality for V2 broad residual targets."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     try:
         broad_pred = read_source_table(index_df, "broad_residual_test_predictions_long")
         broad_ev = read_source_table(index_df, "broad_residual_feature_evidence_long")
@@ -359,14 +351,13 @@ def compute_broad_effects(index_df: pd.DataFrame, feature_dict: pd.DataFrame, sp
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: main entry point
+# main entry point
 # =============================================================================
 # The main function wires inputs, output folders, QC checks, reports, and terminal summaries.
 
 def main() -> int:
     """Run the script's command-line workflow.
     Writes outputs, QC checks, summaries, and terminal status messages."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     args = parse_args()
     started = dt.datetime.now()
     output_root = Path(args.output_root)
@@ -548,10 +539,9 @@ def main() -> int:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: command-line guard
+# command-line guard
 # =============================================================================
 # Keep this guard so scripts can be imported for testing without executing the step.
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

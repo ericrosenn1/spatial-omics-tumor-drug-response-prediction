@@ -17,14 +17,6 @@ Scientific role:
     the same treatment. This guards against overinterpreting unstable treatment-
     specific screens as spatial biology claims.
 
-Documentation polish marker:
-    SPATIAL_PREDICTION_MODEL_V2_STEP09_DOC_POLISH_V1
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic,
-    imports, constants, thresholds, hyperparameters, validation rules,
-    output filenames, and return codes must remain unchanged.
 """
 
 

@@ -16,9 +16,6 @@ Scientific role:
     residual discovery models, curated treatment-specific screens, and label-
     shuffle-validated findings.
 
-Documentation polish marker:
-    SPATIAL_PREDICTION_MODEL_V2_STEP10_DOC_POLISH_V1
-
 Reporting corrections:
     Matched normalized-gain summaries are reconstructed from saved feature
     evidence. Original fitting, selection and validation rules are unchanged.
@@ -254,7 +251,6 @@ def add_model_row(rows: list[dict], **kwargs):
 # =============================================================================
 # Reporting integration patch helpers
 # =============================================================================
-# STEP10_INTEGRATION_PATCH_V2
 
 def _safe_get_number(row, keys):
     """Return the first numeric value from a row-like object."""
@@ -372,7 +368,7 @@ def enrich_summaries_from_available_tables(summaries: dict[str, dict], tables: d
 
 
 def collect_documentation_artifacts(root: Path) -> pd.DataFrame:
-    """Collect documentation bundles and reviewer support documents under Step 10."""
+    """Collect documentation bundles and supporting documents under Step 10."""
 
     rows = []
     keywords = [

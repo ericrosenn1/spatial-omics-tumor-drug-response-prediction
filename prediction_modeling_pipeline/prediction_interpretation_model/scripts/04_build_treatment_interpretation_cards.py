@@ -18,7 +18,6 @@ Source-truth policy:
 """
 
 # =============================================================================
-# PIM_DOCS_PATCH: RUN AND MAINTENANCE INSTRUCTIONS
 # =============================================================================
 # Run numbered scripts through 00_run_prediction_interpretation_model.py unless
 # debugging a single step. Treat the V2 full-run root as read-only source truth.
@@ -28,7 +27,7 @@ Source-truth policy:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: imports and dependencies
+# imports and dependencies
 # =============================================================================
 # Keep imports explicit and standard-library-first where practical. The pipeline
 # expects local scripts to run from the scripts directory or through the orchestrator.
@@ -62,7 +61,7 @@ from _pim_utils import (
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: functions
+# functions
 # =============================================================================
 # Functions are intentionally small enough to support reruns, QC tracing, and
 # clear failure messages when upstream source contracts are incomplete.
@@ -70,7 +69,6 @@ from _pim_utils import (
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments for this script.
     Defaults preserve local project paths while allowing explicit overrides."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     parser = argparse.ArgumentParser()
     parser.add_argument("--project-root", default=None)
     parser.add_argument("--model-root", default="")
@@ -86,7 +84,6 @@ def parse_args() -> argparse.Namespace:
 def fmt_num(value: object, digits: int = 4) -> str:
     """Format numeric values for readable reports.
     Returns blank text for missing or nonfinite values."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     try:
         val = float(value)
     except Exception:
@@ -99,7 +96,6 @@ def fmt_num(value: object, digits: int = 4) -> str:
 def top_feature_summary(sub: pd.DataFrame, direction: str, n: int) -> str:
     """Summarize top signed features for a card.
     Separates associated with higher teacher residual and associated with lower teacher residual directions."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if sub.empty:
         return "none"
     if direction == "positive":
@@ -127,7 +123,6 @@ def top_feature_summary(sub: pd.DataFrame, direction: str, n: int) -> str:
 def top_theme_summary(sub: pd.DataFrame, direction: str, n: int) -> str:
     """Summarize top signed themes for a card.
     Keeps treatment cards compact and biologically readable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if sub.empty:
         return "none"
     if direction == "positive":
@@ -153,7 +148,6 @@ def top_theme_summary(sub: pd.DataFrame, direction: str, n: int) -> str:
 def build_card_text(row: pd.Series, features: pd.DataFrame, themes: pd.DataFrame, top_n_features: int, top_n_themes: int) -> str:
     """Build the text body for one treatment interpretation card.
     Includes evidence, spatial mechanisms, caveats, and non-clinical framing."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     drug_key = str(row.get("drug_key", ""))
     higher_teacher_residual_features = top_feature_summary(features, "positive", top_n_features)
     lower_teacher_residual_features = top_feature_summary(features, "negative", top_n_features)
@@ -205,14 +199,13 @@ def build_card_text(row: pd.Series, features: pd.DataFrame, themes: pd.DataFrame
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: main entry point
+# main entry point
 # =============================================================================
 # The main function wires inputs, output folders, QC checks, reports, and terminal summaries.
 
 def main() -> int:
     """Run the script's command-line workflow.
     Writes outputs, QC checks, summaries, and terminal status messages."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     args = parse_args()
     started = dt.datetime.now()
     output_root = Path(args.output_root)
@@ -399,10 +392,9 @@ def main() -> int:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: command-line guard
+# command-line guard
 # =============================================================================
 # Keep this guard so scripts can be imported for testing without executing the step.
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

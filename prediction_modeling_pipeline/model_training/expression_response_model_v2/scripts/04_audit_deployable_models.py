@@ -17,13 +17,6 @@ Scientific role:
     and their performance summaries are present and interpretable before
     teacher_builder or Visium scoring consumes expression-response outputs.
 
-Documentation polish marker:
-    EXPRESSION_MODEL_V2_STEP04_DOC_POLISH_V1
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic must
-    remain unchanged.
 """
 
 
@@ -183,7 +176,7 @@ def main():
     else:
         add_check("cv_predictions", "WARN", "missing or empty")
 
-    # Copy the model index into audit/ so reviewers can inspect the exact audited table.
+    # Preserve the exact model index alongside its validation report.
     model_index.to_csv(audit_dir / "model_index_for_audit.tsv", sep="\t", index=False)
     pd.DataFrame(checks).to_csv(audit_dir / "deployable_model_audit_checks.tsv", sep="\t", index=False)
 
@@ -192,7 +185,7 @@ def main():
     # =========================
     # Human-readable audit summary
     # =========================
-    # The text summary is the reviewer-facing description of model approval,
+    # The text summary is the human-readable description of model approval,
     # skipped treatments, and audit checks.
 
     lines = []

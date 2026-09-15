@@ -18,7 +18,6 @@ Source-truth policy:
 """
 
 # =============================================================================
-# PIM_DOCS_PATCH: RUN AND MAINTENANCE INSTRUCTIONS
 # =============================================================================
 # Run numbered scripts through 00_run_prediction_interpretation_model.py unless
 # debugging a single step. Treat the V2 full-run root as read-only source truth.
@@ -28,7 +27,7 @@ Source-truth policy:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: imports and dependencies
+# imports and dependencies
 # =============================================================================
 # Keep imports explicit and standard-library-first where practical. The pipeline
 # expects local scripts to run from the scripts directory or through the orchestrator.
@@ -62,7 +61,7 @@ from _pim_utils import (
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: constants and source contracts
+# constants and source contracts
 # =============================================================================
 # Constants define expected files, output names, QC contracts, or reporting rules.
 
@@ -102,7 +101,7 @@ CORE_FINAL_FILES = [
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: functions
+# functions
 # =============================================================================
 # Functions are intentionally small enough to support reruns, QC tracing, and
 # clear failure messages when upstream source contracts are incomplete.
@@ -110,7 +109,6 @@ CORE_FINAL_FILES = [
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments for this script.
     Defaults preserve local project paths while allowing explicit overrides."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     parser = argparse.ArgumentParser()
     parser.add_argument("--project-root", default=None)
     parser.add_argument("--model-root", default="")
@@ -124,7 +122,6 @@ def parse_args() -> argparse.Namespace:
 def sha256_file(path: Path, max_bytes: int = 128 * 1024 * 1024) -> str:
     """Compute a SHA256 digest for a package file.
     Large files can be skipped to keep QC runtime bounded."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if path.stat().st_size > max_bytes:
         return "skipped_large_file"
     digest = hashlib.sha256()
@@ -137,7 +134,6 @@ def sha256_file(path: Path, max_bytes: int = 128 * 1024 * 1024) -> str:
 def first_line(path: Path) -> str:
     """Read the first line of a text file.
     Used to verify FILEPATH-first report convention."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     with path.open("r", encoding="utf-8", errors="ignore") as handle:
         return handle.readline().strip()
 
@@ -145,7 +141,6 @@ def first_line(path: Path) -> str:
 def read_json_status(path: Path) -> str:
     """Read a status value from a JSON summary.
     Returns explicit missing or read-error status text when needed."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if not path.exists():
         return "missing"
     try:
@@ -158,7 +153,6 @@ def read_json_status(path: Path) -> str:
 def all_files_under(root: Path) -> List[Path]:
     """List all files under a folder.
     Used by final packaging and manifest generation."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if not root.exists():
         return []
     return [p for p in sorted(root.rglob("*")) if p.is_file()]
@@ -167,7 +161,6 @@ def all_files_under(root: Path) -> List[Path]:
 def should_package(path: Path, output_root: Path) -> bool:
     """Decide whether a file should enter the final ZIP.
     Excludes logs, backups, caches, and intermediate packaging artifacts."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     rel = path.relative_to(output_root).as_posix()
 
     excluded_fragments = [
@@ -210,7 +203,6 @@ def should_package(path: Path, output_root: Path) -> bool:
 def build_package_file_manifest(files: List[Path], output_root: Path) -> pd.DataFrame:
     """Helper routine for this prediction_interpretation_model script.
     Keeps data movement, QC, or reporting behavior explicit and auditable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     rows = []
     for path in files:
         try:
@@ -236,7 +228,6 @@ def build_package_file_manifest(files: List[Path], output_root: Path) -> pd.Data
 def zip_files(zip_path: Path, files: List[Path], output_root: Path) -> None:
     """Helper routine for this prediction_interpretation_model script.
     Keeps data movement, QC, or reporting behavior explicit and auditable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     ensure_dir(zip_path.parent)
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
         for path in files:
@@ -249,7 +240,6 @@ def zip_files(zip_path: Path, files: List[Path], output_root: Path) -> None:
 def qc_table_fail_warn_counts(path: Path) -> Tuple[int, int, int]:
     """Helper routine for this prediction_interpretation_model script.
     Keeps data movement, QC, or reporting behavior explicit and auditable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if not path.exists():
         return 0, 0, 0
     df = read_table(path)
@@ -260,14 +250,13 @@ def qc_table_fail_warn_counts(path: Path) -> Tuple[int, int, int]:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: main entry point
+# main entry point
 # =============================================================================
 # The main function wires inputs, output folders, QC checks, reports, and terminal summaries.
 
 def main() -> int:
     """Run the script's command-line workflow.
     Writes outputs, QC checks, summaries, and terminal status messages."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     args = parse_args()
     started = dt.datetime.now()
     output_root = Path(args.output_root)
@@ -498,10 +487,9 @@ def main() -> int:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: command-line guard
+# command-line guard
 # =============================================================================
 # Keep this guard so scripts can be imported for testing without executing the step.
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

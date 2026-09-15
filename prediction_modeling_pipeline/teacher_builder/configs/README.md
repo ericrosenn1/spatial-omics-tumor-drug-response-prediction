@@ -66,4 +66,4 @@ For the full run:
 
 ## GitHub policy
 
-Commit example configs and durable documentation. Do not commit machine-specific `.local.yaml` files, generated outputs, logs, archives, model artifacts, whole-slide images, h5ad files, or large derived tables unless they are explicitly curated as reviewer handoffs.
+Commit example configs and durable documentation. Do not commit machine-specific `.local.yaml` files, generated outputs, logs, archives, model artifacts, whole-slide images, h5ad files, or large derived tables unless they are explicitly included as reproducibility inputs.

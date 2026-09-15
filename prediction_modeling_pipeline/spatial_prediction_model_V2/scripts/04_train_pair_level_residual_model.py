@@ -16,14 +16,6 @@ Scientific role:
     generation step for curating spatial biology features, not a final
     treatment-specific claim by itself.
 
-Documentation polish marker:
-    SPATIAL_PREDICTION_MODEL_V2_STEP04_DOC_POLISH_V2
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic,
-    imports, constants, thresholds, hyperparameters, feature-selection
-    rules, output filenames, and return codes must remain unchanged.
 """
 
 

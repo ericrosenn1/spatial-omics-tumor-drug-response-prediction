@@ -19,7 +19,6 @@ Source-truth policy:
 """
 
 # =============================================================================
-# PIM_DOCS_PATCH: RUN AND MAINTENANCE INSTRUCTIONS
 # =============================================================================
 # Run numbered scripts through 00_run_prediction_interpretation_model.py unless
 # debugging a single step. Treat the V2 full-run root as read-only source truth.
@@ -29,7 +28,7 @@ Source-truth policy:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: imports and dependencies
+# imports and dependencies
 # =============================================================================
 # Keep imports explicit and standard-library-first where practical. The pipeline
 # expects local scripts to run from the scripts directory or through the orchestrator.
@@ -60,7 +59,7 @@ except Exception as exc:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: constants and source contracts
+# constants and source contracts
 # =============================================================================
 # Constants define expected files, output names, QC contracts, or reporting rules.
 
@@ -630,7 +629,7 @@ STEP_DIRS = [
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: functions
+# functions
 # =============================================================================
 # Functions are intentionally small enough to support reruns, QC tracing, and
 # clear failure messages when upstream source contracts are incomplete.
@@ -638,14 +637,12 @@ STEP_DIRS = [
 def now_stamp() -> str:
     """Return a filesystem-safe timestamp string.
     Used for run names, patch logs, and reproducible report folders."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     return dt.datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
 def write_text_report(path: Path, body: str) -> None:
     """Write a text report with FILEPATH on the first line.
     This convention is required for all generated text reports."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(f"FILEPATH: {path}\n\n{body}", encoding="utf-8")
 
@@ -653,7 +650,6 @@ def write_text_report(path: Path, body: str) -> None:
 def write_json(path: Path, data: object) -> None:
     """Write structured metadata as formatted JSON.
     Creates parent folders and preserves readable provenance output."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
 
@@ -661,7 +657,6 @@ def write_json(path: Path, data: object) -> None:
 def write_tsv(path: Path, rows: List[dict]) -> None:
     """Write a pandas DataFrame as a tab-separated table.
     Creates parent folders before writing the output artifact."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     path.parent.mkdir(parents=True, exist_ok=True)
     if not rows:
         path.write_text("", encoding="utf-8")
@@ -681,7 +676,6 @@ def write_tsv(path: Path, rows: List[dict]) -> None:
 def dataframe_to_tsv(path: Path, df: pd.DataFrame) -> None:
     """Helper routine for this prediction_interpretation_model script.
     Keeps data movement, QC, or reporting behavior explicit and auditable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     path.parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(path, sep="\t", index=False)
 
@@ -689,7 +683,6 @@ def dataframe_to_tsv(path: Path, df: pd.DataFrame) -> None:
 def open_folder(path: Path) -> None:
     """Open an output folder in the local operating system.
     Failures are intentionally nonfatal so batch runs can continue."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     try:
         if os.name == "nt":
             os.startfile(str(path))
@@ -704,7 +697,6 @@ def open_folder(path: Path) -> None:
 def sha256_file(path: Path, max_bytes: int) -> str:
     """Compute a SHA256 digest for a package file.
     Large files can be skipped to keep QC runtime bounded."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     size = path.stat().st_size
     if size > max_bytes:
         return "skipped_large_file"
@@ -741,14 +733,12 @@ def validate_spatial_override(original_path: Path, override_path: Path, expected
 def choose_sep(path: Path) -> str:
     """Infer the delimiter for a CSV/TSV-style table path.
     TSV and TAB files use tab; other table files default to comma."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     return "\t" if path.suffix.lower() in [".tsv", ".tab"] else ","
 
 
 def read_header(path: Path) -> List[str]:
     """Read only the header row from a table.
     Avoids loading large V2 source tables when only the schema is needed."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     sep = choose_sep(path)
     df = pd.read_csv(path, sep=sep, nrows=0)
     return list(df.columns)
@@ -757,7 +747,6 @@ def read_header(path: Path) -> List[str]:
 def read_table(path: Path, nrows: Optional[int] = None, usecols: Optional[Sequence[str]] = None) -> pd.DataFrame:
     """Read a CSV/TSV table with the project delimiter convention.
     Supports optional row and column restrictions for large V2 files."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     sep = choose_sep(path)
     return pd.read_csv(path, sep=sep, nrows=nrows, usecols=usecols, low_memory=False)
 
@@ -765,7 +754,6 @@ def read_table(path: Path, nrows: Optional[int] = None, usecols: Optional[Sequen
 def choose_column(columns: Sequence[str], candidates: Sequence[str]) -> Optional[str]:
     """Helper routine for this prediction_interpretation_model script.
     Keeps data movement, QC, or reporting behavior explicit and auditable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     lower_to_original = {str(col).lower(): col for col in columns}
     for candidate in candidates:
         if candidate.lower() in lower_to_original:
@@ -776,7 +764,6 @@ def choose_column(columns: Sequence[str], candidates: Sequence[str]) -> Optional
 def safe_slug(value: str) -> str:
     """Convert arbitrary text into a filesystem-safe slug.
     Used for stable filenames and compact artifact names."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     value = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(value))
     value = re.sub(r"_+", "_", value)
     return value.strip("_")
@@ -785,7 +772,6 @@ def safe_slug(value: str) -> str:
 def build_output_manifest(root: Path) -> List[dict]:
     """Inventory files under an output root.
     Captures relative paths, absolute paths, file sizes, and suffixes."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     rows = []
     for path in sorted(root.rglob("*")):
         if path.is_file():
@@ -805,7 +791,6 @@ def build_output_manifest(root: Path) -> List[dict]:
 def source_path_by_id(source_rows: List[dict], source_id: str) -> Path:
     """Helper routine for this prediction_interpretation_model script.
     Keeps data movement, QC, or reporting behavior explicit and auditable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     for row in source_rows:
         if row["source_id"] == source_id:
             return Path(row["absolute_path"])
@@ -815,7 +800,6 @@ def source_path_by_id(source_rows: List[dict], source_id: str) -> Path:
 def qc_status_from_table(path: Path) -> Tuple[int, int]:
     """Helper routine for this prediction_interpretation_model script.
     Keeps data movement, QC, or reporting behavior explicit and auditable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if not path.exists():
         return 0, 0
     try:
@@ -831,7 +815,6 @@ def qc_status_from_table(path: Path) -> Tuple[int, int]:
 def text_has_pass_status(path: Path) -> Optional[bool]:
     """Helper routine for this prediction_interpretation_model script.
     Keeps data movement, QC, or reporting behavior explicit and auditable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if not path.exists():
         return None
     text = path.read_text(encoding="utf-8", errors="ignore")
@@ -845,7 +828,6 @@ def text_has_pass_status(path: Path) -> Optional[bool]:
 def json_status(path: Path) -> Optional[str]:
     """Helper routine for this prediction_interpretation_model script.
     Keeps data movement, QC, or reporting behavior explicit and auditable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if not path.exists():
         return None
     try:
@@ -859,7 +841,6 @@ def json_status(path: Path) -> Optional[str]:
 def add_check(checks: List[dict], errors: List[str], warnings: List[str], check_id: str, status: str, observed: object, expected: object, detail: str) -> None:
     """Helper routine for this prediction_interpretation_model script.
     Keeps data movement, QC, or reporting behavior explicit and auditable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     checks.append({
         "check_id": check_id,
         "status": status,
@@ -876,7 +857,6 @@ def add_check(checks: List[dict], errors: List[str], warnings: List[str], check_
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments for this script.
     Defaults preserve local project paths while allowing explicit overrides."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--project-root", default=None)
@@ -901,14 +881,13 @@ def parse_args() -> argparse.Namespace:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: main entry point
+# main entry point
 # =============================================================================
 # The main function wires inputs, output folders, QC checks, reports, and terminal summaries.
 
 def main() -> int:
     """Run the script's command-line workflow.
     Writes outputs, QC checks, summaries, and terminal status messages."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     args = parse_args()
 
     project_root = Path(args.project_root)
@@ -1586,7 +1565,7 @@ def main() -> int:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: command-line guard
+# command-line guard
 # =============================================================================
 # Keep this guard so scripts can be imported for testing without executing the step.
 
@@ -1599,4 +1578,3 @@ if __name__ == "__main__":
         print("UNHANDLED ERROR IN STEP 01")
         print("".join(traceback.format_exception(exc)))
         raise SystemExit(1)
-

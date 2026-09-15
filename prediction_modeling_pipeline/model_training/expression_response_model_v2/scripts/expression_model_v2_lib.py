@@ -19,13 +19,6 @@ Scientific role:
     verify that treatment keys, labels, calibration metrics, and shrinkage logic
     are used consistently across training, audit, and Visium teacher scoring.
 
-Documentation polish marker:
-    EXPRESSION_MODEL_V2_DOC_POLISH_V1
-
-Important:
-    This documentation pass is intentionally non-behavioral. Comments,
-    section headers, and docstrings may be added, but executable logic must
-    remain unchanged.
 """
 
 # =========================

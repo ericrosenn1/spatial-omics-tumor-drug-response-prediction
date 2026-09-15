@@ -126,6 +126,7 @@ def run(output, config):
         pseudobulks.append({"sample_id": section["sample_id"], **bulk})
         with warnings.catch_warnings(record=True) as preprocessing_warnings:
             processed = spatial.preprocess_adata(retained, n_top_genes=config["genes"], n_pcs=config["spatial_pcs"])
+        check("required_clustering_completed_" + section["sample_id"], "leiden" in processed.obs and "X_pca" in processed.obsm and "X_umap" in processed.obsm)
         processed, score_columns = spatial.score_marker_programs(processed)
         check("marker_programs_computed_" + section["sample_id"], len(score_columns) == 7)
         spatial.assign_spot_labels(processed, score_columns)
@@ -352,14 +353,14 @@ def run(output, config):
         "model_prediction_rows": len(external)*len(bundles), "alignment_rows": len(alignment), "signed_feature_effects": len(effects),
         "permutations_per_profile": config["n_shuffles"], "repeated_splits": config["n_repeats"],
         "conditional_smoke_accepted_profiles": int(summaries[-1].validated_for_step10.sum()),
-        "executed": ["seeded raw 10x-style MTX and coordinate loading", "retained-spot/gene QC and normalization/log/HVG/scaling",
+        "executed": ["seeded raw 10x-style MTX and coordinate loading", "retained-spot/gene QC and normalization/log/HVG/scaling; PCA, neighbors, UMAP and Leiden",
             "marker program scoring and physical-neighbor axis refinement", "saved expression base-model/sigmoid calibration fixture",
             "saved trained probability fixture supplying the histology modality interface", "governed fusion Step04 and handoff Step05",
             "hash-bound precomputed three-file handoff interface", "training-only feature selection and fitted XGBoost fixture",
             "durable conditional permutation blocks, injected interruption/resume and prediction-based metric recomputation",
             "maintained signed feature/theme effects", "saved fitted prediction/contributions and separate saved alignment/contributions", "numerical, identity, missing-feature, reload, ordering and batch QC"],
         "excluded": ["real clinical response data and scientific model validation", "original expression/histology cohort training",
-            "histology CNN/tile extraction and pretrained image weights", "PCA-neighbor graph, UMAP and Leiden", "external gene-set downloads and full feature pipeline Steps06-15",
+            "histology CNN/tile extraction and pretrained image weights", "external gene-set downloads and full architecture extraction",
             "full pooled supervised registry and full treatment-candidate discovery", "production1000-permutation evaluation and manuscript/figure generation"],
         "fixture_cautions": "Teacher targets and trained teacher objects are synthetic; fitted smoke bundles are exported regardless of the smoke conditional decision and never marked independently supported.",
         "production_settings_modified": False, "network_or_private_inputs_required": False,

@@ -11,7 +11,7 @@ import tarfile
 import time
 import zipfile
 from collections import Counter, defaultdict
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -81,7 +81,63 @@ def public_path(path: Path) -> str:
 
 
 def manifest_path(root: Path, relative: str) -> Path:
-    return root / Path(str(relative).replace("\\", "/"))
+    """Resolve a manifest member inside its declared root on every platform."""
+    root = Path(root).resolve()
+    member = Path(str(relative).replace("\\", "/"))
+    target = (root / member).resolve()
+    if member.is_absolute() or PureWindowsPath(relative).drive or not target.is_relative_to(root):
+        raise ValueError(f"Manifest path escapes its root: {relative}")
+    return target
+
+
+def sha256_file(path: Path) -> str:
+    with path.open("rb") as handle:
+        return hashlib.file_digest(handle, "sha256").hexdigest()
+
+
+def extract_archive(archive_path: Path, extract_root: Path, overwrite: bool) -> str:
+    """Extract regular members atomically; only hash-verified completion is reusable."""
+    marker = extract_root / ".extraction_complete.json"
+    source_hash = sha256_file(archive_path)
+    if marker.is_file() and not overwrite:
+        record = json.loads(marker.read_text(encoding="utf-8"))
+        if record.get("source_sha256") == source_hash and all(
+            manifest_path(extract_root, name).is_file()
+            and sha256_file(manifest_path(extract_root, name)) == expected
+            for name, expected in record.get("files", {}).items()
+        ) and record.get("files"):
+            return "extracted_existing"
+    files = {}
+    is_zip = zipfile.is_zipfile(archive_path)
+    with (zipfile.ZipFile(archive_path) if is_zip else tarfile.open(archive_path)) as archive:
+        members = archive.infolist() if is_zip else archive.getmembers()
+        # Validate every name and reject links before writing any member.
+        for member in members:
+            name = member.filename if is_zip else member.name
+            manifest_path(extract_root, name)
+            if (is_zip and (member.external_attr >> 16) & 0o170000 == 0o120000) or (
+                not is_zip and not (member.isfile() or member.isdir())
+            ):
+                raise ValueError(f"Unsupported archive member: {name}")
+        for member in members:
+            if member.is_dir() if is_zip else member.isdir():
+                continue
+            name = member.filename if is_zip else member.name
+            target = manifest_path(extract_root, name)
+            ensure_dir(target.parent)
+            part = target.with_name(target.name + ".part")
+            try:
+                with (archive.open(member) if is_zip else archive.extractfile(member)) as source, part.open("wb") as out:
+                    shutil.copyfileobj(source, out)
+                part.replace(target)
+                files[name] = sha256_file(target)
+            finally:
+                part.unlink(missing_ok=True)
+    if not files:
+        raise ValueError("Archive contains no regular files")
+    ensure_dir(extract_root)
+    marker.write_text(json.dumps({"source_sha256": source_hash, "files": files}, sort_keys=True), encoding="utf-8")
+    return "extracted"
 
 
 def source_url(row: dict[str, str]) -> str:
@@ -107,6 +163,9 @@ def download_file(url: str, path: Path, overwrite: bool = False, retries: int = 
             req = Request(url, headers={"User-Agent": "Mozilla/5.0"})
             with urlopen(req, timeout=120) as response, part_path.open("wb") as out:
                 shutil.copyfileobj(response, out)
+                expected_size = response.headers.get("Content-Length")
+            if expected_size is not None and part_path.stat().st_size != int(expected_size):
+                raise OSError("Downloaded byte count differs from Content-Length")
             if part_path.stat().st_size <= 0:
                 part_path.unlink(missing_ok=True)
                 return False, "download_empty"
@@ -156,7 +215,7 @@ def verify_md5_if_available(path: Path, checksum: str) -> str:
     return "md5_ok" if file_md5(path).lower() == expected else "md5_mismatch"
 
 
-def prepare_tls_archive(visium_root: Path, tls_rows: list[dict[str, str]], download: bool, dry_run: bool, overwrite: bool, skip_zenodo: bool) -> dict[str, str]:
+def prepare_tls_archive(visium_root: Path, tls_rows: list[dict[str, str]], download: bool, dry_run: bool, overwrite: bool, skip_zenodo: bool, extract: bool = True) -> dict[str, str]:
     if not tls_rows:
         return {"status": "not_needed", "checksum_status": "not_applicable"}
     if skip_zenodo:
@@ -169,7 +228,8 @@ def prepare_tls_archive(visium_root: Path, tls_rows: list[dict[str, str]], downl
         if download:
             print(f"DRY ZENODO API: {ZENODO_RECORD_API}")
             print(f"DRY DOWNLOAD ZENODO ZIP: {zip_path}")
-        print(f"DRY EXTRACT ZENODO ZIP: {zip_path} -> {extract_root}")
+        if extract:
+            print(f"DRY EXTRACT ZENODO ZIP: {zip_path} -> {extract_root}")
         return {"status": "dry_run", "checksum_status": "dry_run"}
 
     checksum_status = "not_checked"
@@ -184,14 +244,10 @@ def prepare_tls_archive(visium_root: Path, tls_rows: list[dict[str, str]], downl
     elif not zip_path.exists():
         return {"status": "missing_zenodo_zip", "checksum_status": "not_checked"}
 
-    missing_members = [row for row in tls_rows if not manifest_path(visium_root, row["raw_cache_relative_path"]).exists()]
-    if not missing_members and not overwrite:
-        return {"status": "extracted_existing", "checksum_status": checksum_status}
-
-    ensure_dir(extract_root)
+    if not extract:
+        return {"status": "downloaded_or_cached", "checksum_status": checksum_status}
     try:
-        with zipfile.ZipFile(zip_path) as archive:
-            archive.extractall(extract_root)
+        extract_archive(zip_path, extract_root, overwrite)
     except Exception as exc:
         print(f"ZENODO ZIP EXTRACT FAILED: {zip_path}")
         print(exc)
@@ -200,13 +256,8 @@ def prepare_tls_archive(visium_root: Path, tls_rows: list[dict[str, str]], downl
 
 
 def extract_tar_if_needed(tar_path: Path, extract_root: Path, overwrite: bool) -> tuple[bool, str]:
-    if extract_root.exists() and any(extract_root.iterdir()) and not overwrite:
-        return True, "extracted_existing"
-    ensure_dir(extract_root)
     try:
-        with tarfile.open(tar_path) as archive:
-            archive.extractall(extract_root)
-        return True, "extracted"
+        return True, extract_archive(tar_path, extract_root, overwrite)
     except Exception as exc:
         print(f"TAR EXTRACT FAILED: {tar_path}")
         print(exc)
@@ -241,17 +292,34 @@ def stage_file(visium_root: Path, row: dict[str, str], dry_run: bool, overwrite:
         status = "missing_raw_source"
         byte_count = 0
     elif cohort_path.exists() and cohort_path.stat().st_size > 0 and not overwrite:
-        status = "existing"
+        try:
+            with (gzip.open(raw_path, "rb") if archive_type == "gzip" else raw_path.open("rb")) as source:
+                expected = hashlib.file_digest(source, "sha256").hexdigest()
+            status = "existing" if sha256_file(cohort_path) == expected else "stage_failed"
+        except (OSError, EOFError):
+            status = "stage_failed"
+        if status == "stage_failed":
+            print(f"Existing staged content cannot be verified: {cohort_path}; inspect before using --overwrite")
         byte_count = cohort_path.stat().st_size
     else:
         ensure_dir(cohort_path.parent)
-        if archive_type == "gzip":
-            with gzip.open(raw_path, "rb") as inp, cohort_path.open("wb") as out:
-                shutil.copyfileobj(inp, out)
-        else:
-            shutil.copy2(raw_path, cohort_path)
-        status = "staged"
-        byte_count = cohort_path.stat().st_size
+        part = cohort_path.with_name(cohort_path.name + ".part")
+        try:
+            if archive_type == "gzip":
+                with gzip.open(raw_path, "rb") as inp, part.open("wb") as out:
+                    shutil.copyfileobj(inp, out)
+            else:
+                shutil.copy2(raw_path, part)
+            if not part.stat().st_size:
+                raise ValueError("Source file is empty")
+            part.replace(cohort_path)
+            status = "staged"
+            byte_count = cohort_path.stat().st_size
+        except (OSError, EOFError, ValueError) as exc:
+            print(f"STAGING FAILED: {row['sample_id']} {row['file_role']}: {exc}")
+            status, byte_count = "stage_failed", 0
+        finally:
+            part.unlink(missing_ok=True)
 
     return {
         "sample_id": row["sample_id"],
@@ -339,6 +407,18 @@ def validate_manifest(rows: list[dict[str, str]], manifest: Path) -> None:
     missing_paths = [row for row in rows if not row.get("raw_cache_relative_path") or not row.get("cohort_relative_path")]
     if missing_paths:
         raise ValueError(f"Manifest rows missing staging paths: {len(missing_paths)}")
+    destinations = set()
+    for row in rows:
+        sample = row["sample_id"]
+        if not sample.startswith("SAMPLE_") or not sample.removeprefix("SAMPLE_").isdigit():
+            raise ValueError(f"Invalid sample identifier: {sample}")
+        for field in ("raw_cache_relative_path", "cohort_relative_path", "archive_member_relative_path"):
+            if row.get(field):
+                manifest_path(manifest.parent, row[field])
+        destination = row["cohort_relative_path"].replace("\\", "/")
+        if destination in destinations:
+            raise ValueError(f"Duplicate staging destination: {destination}")
+        destinations.add(destination)
 
 
 def url_check(url: str) -> tuple[bool, str]:
@@ -434,7 +514,9 @@ def main() -> int:
     visium_root = Path(args.visium_root)
     if not visium_root.is_absolute():
         visium_root = (repo_root / visium_root).resolve()
-    manifest = manifest_path(repo_root, args.manifest)
+    manifest = Path(args.manifest)
+    if not manifest.is_absolute():
+        manifest = manifest_path(repo_root, args.manifest)
     if not manifest.exists():
         raise FileNotFoundError(f"Manifest not found: {manifest}")
 
@@ -467,6 +549,7 @@ def main() -> int:
         rows_by_sample[row["sample_id"]].append(row)
 
     inventory_rows: list[dict[str, object]] = []
+    acquisition_failures: list[str] = []
     non_tls_rows = [row for row in rows if row.get("source_type") != TLS_SOURCE_TYPE]
     tls_rows = [row for row in rows if row.get("source_type") == TLS_SOURCE_TYPE]
 
@@ -481,16 +564,25 @@ def main() -> int:
             if args.dry_run:
                 continue
             ok, status = download_file(source_url(row), raw_path, overwrite=args.overwrite)
-            if ok and row.get("source_archive_type") == "geo_tar":
-                extract_tar_if_needed(raw_path, raw_path.parent / (raw_path.name + "_extracted"), args.overwrite)
-            elif not ok:
+            if not ok:
+                acquisition_failures.append(status)
                 print(f"DOWNLOAD PROBLEM: {status} {source_url(row)}")
 
-    tls_status = prepare_tls_archive(visium_root, tls_rows, args.download, args.dry_run, args.overwrite, args.skip_zenodo)
+    if args.stage and not args.dry_run:
+        for raw_rel in sorted({row["raw_cache_relative_path"] for row in non_tls_rows if row.get("source_archive_type") == "geo_tar"}):
+            raw_path = manifest_path(visium_root, raw_rel)
+            ok, status = extract_tar_if_needed(raw_path, raw_path.parent / (raw_path.name + "_extracted"), args.overwrite)
+            if not ok:
+                acquisition_failures.append(status)
+
+    tls_status = prepare_tls_archive(visium_root, tls_rows, args.download, args.dry_run, args.overwrite, args.skip_zenodo, extract=args.stage)
 
     staged_samples: set[str] = set()
     if args.stage:
         for row in rows:
+            if acquisition_failures or tls_status.get("status") in {"zenodo_checksum_failed", "zenodo_extract_failed", "download_failed", "missing_zenodo_zip"}:
+                # Do not stage stale cached members after a failed acquisition.
+                break
             if row.get("source_type") == TLS_SOURCE_TYPE and args.skip_zenodo:
                 inventory = {
                     "sample_id": row["sample_id"], "file_role": row["file_role"], "source_type": row["source_type"],
@@ -534,7 +626,8 @@ def main() -> int:
         print(f"  {role}: {count}")
 
     failure_statuses = {"download_failed", "missing_source_url", "missing_raw_source", "zenodo_checksum_failed", "zenodo_extract_failed", "missing_zenodo_zip", "download_empty", "tar_extract_failed"}
-    if any(status in failure_statuses for status in status_counts) or tls_status.get("status") in failure_statuses:
+    print(f"acquisition_failures: {acquisition_failures}")
+    if acquisition_failures or status_counts["stage_failed"] or any(status in failure_statuses for status in status_counts) or tls_status.get("status") in failure_statuses:
         return 2
     return 0
 

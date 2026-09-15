@@ -19,7 +19,6 @@ Source-truth policy:
 """
 
 # =============================================================================
-# PIM_DOCS_PATCH: RUN AND MAINTENANCE INSTRUCTIONS
 # =============================================================================
 # Run numbered scripts through 00_run_prediction_interpretation_model.py unless
 # debugging a single step. Treat the V2 full-run root as read-only source truth.
@@ -29,7 +28,7 @@ Source-truth policy:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: imports and dependencies
+# imports and dependencies
 # =============================================================================
 # Keep imports explicit and standard-library-first where practical. The pipeline
 # expects local scripts to run from the scripts directory or through the orchestrator.
@@ -60,7 +59,7 @@ from _pim_utils import (
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: functions
+# functions
 # =============================================================================
 # Functions are intentionally small enough to support reruns, QC tracing, and
 # clear failure messages when upstream source contracts are incomplete.
@@ -68,7 +67,6 @@ from _pim_utils import (
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments for this script.
     Defaults preserve local project paths while allowing explicit overrides."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     parser = argparse.ArgumentParser()
     parser.add_argument("--project-root", default=None)
     parser.add_argument("--model-root", default="")
@@ -82,7 +80,6 @@ def parse_args() -> argparse.Namespace:
 def required_file(path: Path) -> Path:
     """Assert that an upstream file exists and return its path.
     Provides clear failure messages when a pipeline contract is incomplete."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if not path.exists():
         raise FileNotFoundError(f"Required upstream file missing: {path}")
     return path
@@ -91,14 +88,12 @@ def required_file(path: Path) -> Path:
 def safe_float_series(values: pd.Series) -> pd.Series:
     """Convert a Series to finite float values with missing values as zero.
     Used for atlas aggregation where absent effects should not crash summaries."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     return pd.to_numeric(values, errors="coerce").fillna(0.0).astype(float)
 
 
 def split_semicolon_values(value: object) -> List[str]:
     """Split semicolon-delimited text into clean values.
     Used for treatment component and class expansion."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     text = str(value)
     if text.lower() == "nan":
         return []
@@ -109,7 +104,6 @@ def split_semicolon_values(value: object) -> List[str]:
 def consensus_label(pos_count: int, neg_count: int, signed_sum: float) -> str:
     """Convert positive/negative counts and signed sum into a consensus label.
     Summarizes whether a theme is net associated with higher teacher residual or associated with lower teacher residual."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if pos_count > neg_count and signed_sum > 0:
         return "consensus_higher_teacher_residual_association"
     if neg_count > pos_count and signed_sum < 0:
@@ -124,7 +118,6 @@ def consensus_label(pos_count: int, neg_count: int, signed_sum: float) -> str:
 def build_theme_atlas(theme_effects: pd.DataFrame, treatment_dict: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Build cross-treatment biology-theme atlas tables.
     Returns summary atlas and treatment-theme matrices."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     df = theme_effects.copy()
     df["signed_theme_effect"] = safe_float_series(df["signed_theme_effect"])
     df["absolute_theme_effect"] = safe_float_series(df["absolute_theme_effect"]) if "absolute_theme_effect" in df.columns else df["signed_theme_effect"].abs()
@@ -165,7 +158,6 @@ def build_theme_atlas(theme_effects: pd.DataFrame, treatment_dict: pd.DataFrame)
 def build_feature_atlas(feature_effects: pd.DataFrame) -> pd.DataFrame:
     """Build cross-treatment feature-effect atlas table.
     Aggregates signed feature evidence across validated treatments."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     df = feature_effects.copy()
     df["signed_effect"] = safe_float_series(df["signed_effect"])
     df["effect_weight"] = safe_float_series(df["effect_weight"]) if "effect_weight" in df.columns else df["signed_effect"].abs()
@@ -199,7 +191,6 @@ def build_feature_atlas(feature_effects: pd.DataFrame) -> pd.DataFrame:
 def cosine_similarity_matrix(matrix: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Helper routine for this prediction_interpretation_model script.
     Keeps data movement, QC, or reporting behavior explicit and auditable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if matrix.empty or "drug_key" not in matrix.columns:
         return pd.DataFrame(), pd.DataFrame()
 
@@ -236,7 +227,6 @@ def cosine_similarity_matrix(matrix: pd.DataFrame) -> Tuple[pd.DataFrame, pd.Dat
 def build_component_atlas(theme_effects: pd.DataFrame, treatment_dict: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Build component and component-class mechanism atlas tables.
     Links treatment components to signed biological themes."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if treatment_dict.empty or "drug_key" not in treatment_dict.columns:
         return pd.DataFrame(), pd.DataFrame()
 
@@ -312,7 +302,6 @@ def build_component_atlas(theme_effects: pd.DataFrame, treatment_dict: pd.DataFr
 def build_sample_mechanism_tables(score_df: pd.DataFrame, theme_effects: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Helper routine for this prediction_interpretation_model script.
     Keeps data movement, QC, or reporting behavior explicit and auditable."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     if score_df.empty or theme_effects.empty:
         return pd.DataFrame(), pd.DataFrame()
 
@@ -354,14 +343,13 @@ def build_sample_mechanism_tables(score_df: pd.DataFrame, theme_effects: pd.Data
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: main entry point
+# main entry point
 # =============================================================================
 # The main function wires inputs, output folders, QC checks, reports, and terminal summaries.
 
 def main() -> int:
     """Run the script's command-line workflow.
     Writes outputs, QC checks, summaries, and terminal status messages."""
-    # PIM_DOCS: keep this block explicit so downstream QC and reports remain traceable.
     args = parse_args()
     started = dt.datetime.now()
     output_root = Path(args.output_root)
@@ -523,10 +511,9 @@ def main() -> int:
 
 
 # =============================================================================
-# PIM_DOCS_SECTION: command-line guard
+# command-line guard
 # =============================================================================
 # Keep this guard so scripts can be imported for testing without executing the step.
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
