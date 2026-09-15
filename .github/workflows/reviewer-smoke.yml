@@ -13,6 +13,9 @@ jobs:
   smoke:
     runs-on: windows-latest
     timeout-minutes: 25
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -39,14 +42,36 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "V2 installation failed: $LASTEXITCODE" }
           & .\.venv_v2\Scripts\python.exe -m pip check
           if ($LASTEXITCODE -ne 0) { throw "V2 dependency check failed: $LASTEXITCODE" }
+      - name: Install coverage tooling
+        run: |
+          & .\.venv\Scripts\python.exe -m pip install -r requirements-coverage.txt
+          if ($LASTEXITCODE -ne 0) { throw "Spatial coverage installation failed: $LASTEXITCODE" }
+          & .\.venv_v2\Scripts\python.exe -m pip install -r requirements-coverage.txt
+          if ($LASTEXITCODE -ne 0) { throw "V2 coverage installation failed: $LASTEXITCODE" }
       - name: Run spatial and teacher regressions
         run: |
-          & .\.venv\Scripts\python.exe -m pytest tests spatial_feature_identification_pipeline/tests prediction_modeling_pipeline/teacher_builder/tests -q
+          $env:COVERAGE_FILE = ".coverage.spatial"
+          & .\.venv\Scripts\python.exe -m pytest tests spatial_feature_identification_pipeline/tests prediction_modeling_pipeline/teacher_builder/tests --cov=. --cov-report= -q
           if ($LASTEXITCODE -ne 0) { throw "Spatial and teacher tests failed: $LASTEXITCODE" }
       - name: Run V2, interpretation and transfer regressions
         run: |
-          & .\.venv_v2\Scripts\python.exe -m pytest prediction_modeling_pipeline/spatial_prediction_model_V2/tests prediction_modeling_pipeline/prediction_interpretation_model/tests prediction_modeling_pipeline/spatial_transfer_inference_model/tests -q
+          $env:COVERAGE_FILE = ".coverage.v2"
+          & .\.venv_v2\Scripts\python.exe -m pytest prediction_modeling_pipeline/spatial_prediction_model_V2/tests prediction_modeling_pipeline/prediction_interpretation_model/tests prediction_modeling_pipeline/spatial_transfer_inference_model/tests --cov=. --cov-report= -q
           if ($LASTEXITCODE -ne 0) { throw "V2 and downstream tests failed: $LASTEXITCODE" }
+      - name: Build combined coverage report
+        run: |
+          Remove-Item Env:COVERAGE_FILE -ErrorAction SilentlyContinue
+          & .\.venv\Scripts\python.exe -m coverage combine
+          if ($LASTEXITCODE -ne 0) { throw "Coverage data merge failed: $LASTEXITCODE" }
+          & .\.venv\Scripts\python.exe -m coverage xml -o coverage.xml
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath coverage.xml)) { throw "coverage.xml generation failed" }
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@0b35c9ecc4f0529d0eb674914510c22f85b196b4 # v7.1.0
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: true
+          use_oidc: true
+          verbose: true
       - name: Execute documented seeded smoke and public handoff
         run: |
           & .\.venv\Scripts\python.exe scripts/run_smoke.py --output local/smoke

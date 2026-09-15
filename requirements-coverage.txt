@@ -1,0 +1,3 @@
+# CI-only coverage tools; installed into both validated Python 3.12 environments.
+coverage==7.16.1
+pytest-cov==7.1.0
