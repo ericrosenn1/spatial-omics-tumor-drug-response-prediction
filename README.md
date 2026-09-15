@@ -190,7 +190,7 @@ Associated working manuscript (unpublished): Eric Rosenn, *A Visium Transcriptom
 
 ## License
 
-No license has been selected for this repository.
+Released under the [MIT License](LICENSE).
 
 ## Contact
 
