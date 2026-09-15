@@ -66,10 +66,10 @@ jobs:
           & .\.venv\Scripts\python.exe -m coverage xml -o coverage.xml
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath coverage.xml)) { throw "coverage.xml generation failed" }
       - name: Upload coverage to Codecov
-        continue-on-error: true
         uses: codecov/codecov-action@0b35c9ecc4f0529d0eb674914510c22f85b196b4 # v7.1.0
         with:
           files: ./coverage.xml
+          disable_search: true
           fail_ci_if_error: true
           use_oidc: true
           verbose: true
