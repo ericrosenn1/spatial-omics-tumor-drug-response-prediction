@@ -2,6 +2,8 @@ cff-version: 1.2.0
 message: "Please cite this software when using the workflow. See README.md for the associated working manuscript."
 type: software
 title: "Spatial Omics Tumor Drug Response Prediction"
+version: "1.0.0"
+date-released: "2026-09-15"
 authors:
   - family-names: Rosenn
     given-names: Eric
