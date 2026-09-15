@@ -22,23 +22,38 @@ jobs:
           cache-dependency-path: |
             requirements-reviewer.txt
             constraints-reviewer.txt
-      - name: Install declared workflow environment
+            prediction_modeling_pipeline/spatial_prediction_model_V2/requirements-v2-reproducible.txt
+      - name: Install declared spatial environment
         run: |
-          python -m pip install -r requirements.txt
-          if ($LASTEXITCODE -ne 0) { throw "Installation failed: $LASTEXITCODE" }
-          python -m pip check
-          if ($LASTEXITCODE -ne 0) { throw "Dependency check failed: $LASTEXITCODE" }
-      - name: Run source and integration regressions
+          python -m venv .venv
+          if ($LASTEXITCODE -ne 0) { throw "Spatial environment creation failed: $LASTEXITCODE" }
+          & .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+          if ($LASTEXITCODE -ne 0) { throw "Spatial installation failed: $LASTEXITCODE" }
+          & .\.venv\Scripts\python.exe -m pip check
+          if ($LASTEXITCODE -ne 0) { throw "Spatial dependency check failed: $LASTEXITCODE" }
+      - name: Install pinned V2 environment
         run: |
-          python -m pytest tests spatial_feature_identification_pipeline/tests prediction_modeling_pipeline/teacher_builder/tests prediction_modeling_pipeline/spatial_prediction_model_V2/tests prediction_modeling_pipeline/prediction_interpretation_model/tests prediction_modeling_pipeline/spatial_transfer_inference_model/tests -q
-          if ($LASTEXITCODE -ne 0) { throw "Regression tests failed: $LASTEXITCODE" }
+          python -m venv .venv_v2
+          if ($LASTEXITCODE -ne 0) { throw "V2 environment creation failed: $LASTEXITCODE" }
+          & .\.venv_v2\Scripts\python.exe -m pip install -r prediction_modeling_pipeline/spatial_prediction_model_V2/requirements-v2-reproducible.txt
+          if ($LASTEXITCODE -ne 0) { throw "V2 installation failed: $LASTEXITCODE" }
+          & .\.venv_v2\Scripts\python.exe -m pip check
+          if ($LASTEXITCODE -ne 0) { throw "V2 dependency check failed: $LASTEXITCODE" }
+      - name: Run spatial and teacher regressions
+        run: |
+          & .\.venv\Scripts\python.exe -m pytest tests spatial_feature_identification_pipeline/tests prediction_modeling_pipeline/teacher_builder/tests -q
+          if ($LASTEXITCODE -ne 0) { throw "Spatial and teacher tests failed: $LASTEXITCODE" }
+      - name: Run V2, interpretation and transfer regressions
+        run: |
+          & .\.venv_v2\Scripts\python.exe -m pytest prediction_modeling_pipeline/spatial_prediction_model_V2/tests prediction_modeling_pipeline/prediction_interpretation_model/tests prediction_modeling_pipeline/spatial_transfer_inference_model/tests -q
+          if ($LASTEXITCODE -ne 0) { throw "V2 and downstream tests failed: $LASTEXITCODE" }
       - name: Execute documented seeded smoke and public handoff
         run: |
-          python scripts/run_smoke.py --output local/smoke
+          & .\.venv\Scripts\python.exe scripts/run_smoke.py --output local/smoke
           if ($LASTEXITCODE -ne 0) { throw "Workflow smoke failed: $LASTEXITCODE" }
-          python prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/16_prepare_precomputed_teacher.py --manifest prediction_modeling_pipeline/teacher_builder/precomputed_handoff_manifest.json --output local/precomputed_handoff
+          & .\.venv_v2\Scripts\python.exe prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/16_prepare_precomputed_teacher.py --manifest prediction_modeling_pipeline/teacher_builder/precomputed_handoff_manifest.json --output local/precomputed_handoff
           if ($LASTEXITCODE -ne 0) { throw "Public handoff failed: $LASTEXITCODE" }
       - name: Check portable source and documentation links
         run: |
-          python scripts/audit_public_repository.py --output local/source_audit.json
+          & .\.venv\Scripts\python.exe scripts/audit_public_repository.py --output local/source_audit.json
           if ($LASTEXITCODE -ne 0) { throw "Source audit failed: $LASTEXITCODE" }
