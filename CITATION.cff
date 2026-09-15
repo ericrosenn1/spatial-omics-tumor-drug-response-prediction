@@ -3,9 +3,11 @@ message: "Please cite this software when using the workflow. See README.md for t
 type: software
 title: "Spatial Omics Tumor Drug Response Prediction"
 version: "1.0.0"
+doi: "10.5281/zenodo.22775462"
 date-released: "2026-09-15"
 authors:
   - family-names: Rosenn
     given-names: Eric
 repository-code: "https://github.com/ericrosenn1/spatial-omics-tumor-drug-response-prediction"
+repository-artifact: "https://zenodo.org/records/22775462"
 license: MIT
