@@ -75,8 +75,73 @@ def read_processing_report(output_root):
     return pd.read_csv(report_path)
 
 
-def get_successful_sample_ids(processing_report):
-    """Return sample IDs with OK processing status."""
+def is_success_or_verified_cached_output(row, output_root=None):
+    """Accept completed processing or verify the specific reusable cache state."""
+    if row.get("status") == "OK":
+        return True
+    if row.get("status") != "SKIPPED" or row.get("reason") != "outputs_exist":
+        return False
+    if pd.notna(row.get("error")) and str(row.get("error")).strip():
+        return False
+
+    sample_id = str(row.get("sample_id", ""))
+    if not sample_id or Path(sample_id).name != sample_id:
+        return False
+    if output_root is not None:
+        sample_root = Path(output_root) / "output_02_01_process_samples_data" / sample_id
+        h5ad_path = sample_root / "adata" / "02_processed.h5ad"
+        feature_path = sample_root / "tables" / "slide_level_feature_row.csv"
+    else:
+        h5ad_path = Path(str(row.get("processed_h5ad", "")))
+        feature_path = Path(str(row.get("slide_feature_row", "")))
+    if not h5ad_path.is_file() or not feature_path.is_file():
+        return False
+
+    try:
+        import h5py
+        from anndata.io import read_elem
+
+        features = pd.read_csv(feature_path)
+        if len(features) != 1 or str(features.iloc[0]["sample_id"]) != sample_id:
+            return False
+        feature = features.iloc[0]
+        # Read metadata only: checking a cache must not load its expression matrix.
+        with h5py.File(h5ad_path, "r") as handle:
+            matrix = handle["X"]
+            shape = matrix.shape if isinstance(matrix, h5py.Dataset) else matrix.attrs["shape"]
+            if len(shape) != 2 or min(shape) <= 0:
+                return False
+            if isinstance(matrix, h5py.Group):
+                encoding = matrix.attrs.get("encoding-type")
+                if encoding not in {"csr_matrix", "csc_matrix"}:
+                    return False
+                data, indices, indptr = (matrix[key] for key in ("data", "indices", "indptr"))
+                if any(not isinstance(part, h5py.Dataset) or part.ndim != 1 for part in (data, indices, indptr)):
+                    return False
+                if data.dtype.kind not in "biufc" or indices.dtype.kind not in "iu" or indptr.dtype.kind not in "iu":
+                    return False
+                pointer_count = shape[0 if encoding == "csr_matrix" else 1] + 1
+                if len(data) != len(indices) or len(indptr) != pointer_count or indptr[0] != 0 or indptr[-1] != len(data):
+                    return False
+            elif matrix.dtype.kind not in "biufc":
+                return False
+            obs = read_elem(handle["obs"])
+            var = read_elem(handle["var"])
+            if tuple(shape) != (len(obs), len(var)):
+                return False
+            if feature["n_spots"] != shape[0] or feature["n_genes"] != shape[1]:
+                return False
+            if not obs["sample_id"].astype(str).eq(sample_id).all():
+                return False
+            if obs["leiden"].isna().any() or obs["leiden"].nunique() < 1:
+                return False
+            return feature["n_clusters"] == obs["leiden"].nunique()
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+
+
+def get_successful_sample_ids(processing_report, output_root=None):
+    """Return successful sample IDs, including only verified completed caches."""
     if processing_report.empty:
         return None
 
@@ -86,12 +151,11 @@ def get_successful_sample_ids(processing_report):
     if "sample_id" not in processing_report.columns:
         return None
 
-    ok_samples = processing_report.loc[
-        processing_report["status"] == "OK",
-        "sample_id",
-    ].astype(str)
-
-    return set(ok_samples)
+    return {
+        str(row["sample_id"])
+        for row in processing_report.to_dict("records")
+        if is_success_or_verified_cached_output(row, output_root)
+    }
 
 
 # =========================
@@ -238,7 +302,7 @@ def main():
     summary_path = merge_dir / "merge_summary.txt"
 
     processing_report = read_processing_report(output_root)
-    successful_sample_ids = get_successful_sample_ids(processing_report)
+    successful_sample_ids = get_successful_sample_ids(processing_report, output_root)
 
     feature_files = find_feature_files(output_root)
 
@@ -258,7 +322,6 @@ def main():
         successful_sample_ids=successful_sample_ids,
     )
 
-    merged.to_csv(merged_path, index=False)
     merge_report.to_csv(merge_report_path, index=False)
 
     summary_text = build_merge_summary(
@@ -269,6 +332,7 @@ def main():
 
     summary_path.write_text(summary_text, encoding="utf-8")
     require_successful_stage(merge_report, "Feature merge", merge_report_path)
+    merged.to_csv(merged_path, index=False)
 
     print("DONE")
     print("Merged table:", merged_path)

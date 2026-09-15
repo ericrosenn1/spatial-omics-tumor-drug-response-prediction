@@ -17,6 +17,24 @@ from spm_v2.predictor_bundle import SpatialPredictorBundle,save_bundle,load_bund
 def sha(path):return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def validate_reference_equivalence(actual, expected, imputer=None):
+    """Reuse the historical attachment allowance without changing either table."""
+    allowed_labels={"label__endothelial_high","label__vascular_endothelial","label__myeloid_low"}
+    corrections=0
+    for c in actual.columns:
+        a=actual[c].to_numpy(float);e=expected[c].to_numpy(float)
+        different_missing=np.isnan(a)!=np.isnan(e)
+        permitted=(c in allowed_labels) & np.isnan(a) & (e==0)
+        if np.any(different_missing & ~permitted):
+            raise ValueError(f"Unexplained reference missingness mismatch for {c}")
+        if not np.allclose(a[~different_missing],e[~different_missing],rtol=0,atol=1e-10,equal_nan=True):
+            raise ValueError(f"Raw reference value mismatch for {c}")
+        corrections+=int(different_missing.sum())
+    if imputer is not None and not np.allclose(imputer.transform(actual),imputer.transform(expected),rtol=0,atol=1e-10):
+        raise ValueError("Saved preprocessing changes after reference attachment")
+    return corrections
+
+
 def numeric_handoff_path(root):
     """Resolve the flat precomputed handoff or original teacher-stage layout.
 
@@ -46,24 +64,11 @@ def attach_reference(existing, raw_path, numeric_path, output):
     reference=FeatureReference().fit(raw)
     transformed=reference.transform(raw)
     manifests=[];checks=[];features=[];predictions=[]
-    allowed_labels={"label__endothelial_high","label__vascular_endothelial","label__myeloid_low"}
     bundles=load_bundle_directory(existing)
     for i,bundle in enumerate(bundles):
         expected=bundle.feature_matrix(numeric,mode="training_reproduction")
         actual=transformed[bundle.ordered_features].apply(pd.to_numeric,errors="raise").replace([np.inf,-np.inf],np.nan)
-        corrections=0
-        for c in bundle.ordered_features:
-            a=actual[c].to_numpy(float);e=expected[c].to_numpy(float)
-            different_missing=np.isnan(a)!=np.isnan(e)
-            permitted=(c in allowed_labels) & np.isnan(a) & (e==0)
-            if np.any(different_missing & ~permitted):
-                raise ValueError(f"Unexplained reference missingness mismatch for {c}")
-            if not np.allclose(a[~different_missing],e[~different_missing],rtol=0,atol=1e-10,equal_nan=True):
-                raise ValueError(f"Raw reference value mismatch for {c}")
-            corrections+=int(different_missing.sum())
-        imputer=bundle.pipeline.named_steps["imputer"]
-        if not np.allclose(imputer.transform(actual),imputer.transform(expected),rtol=0,atol=1e-10):
-            raise ValueError("Saved preprocessing changes after reference attachment")
+        corrections=validate_reference_equivalence(actual,expected,bundle.pipeline.named_steps["imputer"])
         before=bundle.predict(numeric,mode="training_reproduction")
         bundle.feature_reference=reference
         bundle.provenance["feature_reference"]={"status":"PASS_FITTED_PREPROCESSING_AND_PREDICTION_EQUIVALENCE","raw_source":str(raw_path.resolve()),"raw_source_sha256":sha(raw_path),"source_bundle_directory":str(existing.resolve()),"original_false_labels_now_explicit_na_cells_for_this_model":corrections,"missingness_rule":"Keep NA; original saved median imputation reproduces original False encoding. No biological absence is inferred."}
@@ -131,6 +136,7 @@ def main():
         transformed=reference.transform(raw).set_index("sample_id")
         expected=numeric.set_index("sample_id").loc[transformed.index]
         used=evidence.feature_name.unique().tolist()
+        validate_reference_equivalence(transformed[used],expected[used])
         diffs=[]
         for col in used:
             actual=pd.to_numeric(transformed[col],errors="raise").to_numpy(float)
@@ -138,10 +144,8 @@ def main():
             equal=np.allclose(actual,saved,rtol=0,atol=1e-10,equal_nan=True)
             diffs.append({"feature_name":col,"equal":bool(equal),"max_abs_error":float(np.nanmax(np.abs(actual-saved)))})
         pd.DataFrame(diffs).to_csv(a.output/"feature_reference_equivalence.tsv",sep="\t",index=False)
-        if not all(r["equal"] for r in diffs):
-            raise ValueError("Fitted raw reference does not reproduce original Step07 selected feature values")
         hashes[str(a.raw_feature_table.resolve())]=sha(a.raw_feature_table)
-        reference_report={"status":"PASS","training_samples":len(raw),"selected_union_features":len(used)}
+        reference_report={"status":"PENDING_FITTED_PREPROCESSING_EQUIVALENCE","training_samples":len(raw),"selected_union_features":len(used)}
     environment={"python":platform.python_version(),"packages":{n:importlib.metadata.version(n) for n in ["numpy","pandas","scikit-learn","xgboost","joblib"]}}
     rows=[];selected_rows=[];predictions=[];checks=[]
     for row in manifest.itertuples():
@@ -163,6 +167,13 @@ def main():
         priors=pd.to_numeric(sub.treatment_prior,errors="raise").dropna().unique()
         if len(priors)!=1:raise ValueError(f"Prior-anchored reconstruction is ambiguous for {drug}")
         if X[selected].isna().all(axis=0).any():raise ValueError("Selected all-missing feature would be dropped by imputer")
+        if reference is not None:
+            actual_reference=transformed[selected].apply(pd.to_numeric,errors="raise").replace([np.inf,-np.inf],np.nan)
+            saved_reference=expected[selected].apply(pd.to_numeric,errors="raise").replace([np.inf,-np.inf],np.nan)
+            corrections=validate_reference_equivalence(actual_reference,saved_reference,pipe.named_steps["imputer"])
+            if not np.array_equal(pipe.predict(actual_reference),pipe.predict(saved_reference)):
+                raise ValueError("Raw reference changes fitted predictions")
+            reference_report={**reference_report,"status":"PASS_FITTED_PREPROCESSING_AND_PREDICTION_EQUIVALENCE","original_false_labels_now_explicit_na_cells_for_this_model":corrections}
         bundle=SpatialPredictorBundle(drug,selected,pipe,float(priors[0]),numeric.sample_id.astype(str).tolist(),reference,{"input_hashes":hashes,"environment":environment,"final_model_rank":rank,"random_seed":seed,"settings":pipe.named_steps["model"].get_params(),"source_run":str(a.run_root.resolve()),"feature_reference":reference_report,"deployment_fit":"all available corrected teacher rows; held-out performance estimated separately"})
         filename=f"treatment_{rank:02d}_{hashlib.sha256(drug.encode()).hexdigest()[:12]}.joblib"
         save_bundle(bundle,a.output/filename)

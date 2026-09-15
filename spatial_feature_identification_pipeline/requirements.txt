@@ -1,10 +1,12 @@
-
+-c ../constraints-reviewer.txt
 numpy
 pandas
 scipy
 scikit-learn
 anndata
 scanpy
+igraph>=0.11
+leidenalg>=0.10
 squidpy
 h5py
 matplotlib
