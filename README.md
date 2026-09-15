@@ -1,192 +1,542 @@
 # Spatial Omics Tumor Drug Response Prediction
 
-A Python workflow that converts Visium tumor measurements into spatial features, fits treatment-specific response models, and applies saved models to new Visium samples. An included development response-target package lets users run downstream spatial modeling without retraining the expression and histology models.
+This repository contains a source-only version of a spatial omics and machine learning project for identifying tumor microenvironment features from Visium spatial transcriptomics data and using those features to support tumor drug response prediction and interpretation.
 
-Research use only. Outputs are model-derived estimates, not clinical treatment recommendations.
+The project integrates four major analysis layers:
 
-## What the tool does
+1. Spatial feature identification from Visium samples
+2. Teacher model construction from expression and histology response models
+3. Spatial response prediction and biological interpretation of sample-treatment effects
+4. Spatial transfer inference for applying a frozen interpretation atlas to new Visium samples
 
-- Extracts structural, functional and metabolic programs and their spatial organization.
-- Builds section-level features describing tissue composition, accessibility, hotspots, regions and pairwise relationships.
-- Fits pooled and treatment-specific models of transferred response estimates and their deviations from treatment priors.
-- Produces feature/theme interpretations and predicts new samples using saved preprocessing and models.
+The repository is organized as code, configuration files, documentation, and small examples only. Large raw data, generated outputs, model artifacts, figures, spreadsheets, and local archives are intentionally excluded from GitHub.
 
-Existing filenames use “teacher” for a treatment-specific response estimate transferred from expression and/or histology models. Public instructions refer to these as response targets.
+## Project overview
 
-## Workflow
+## Project profile and configuration
+
+This repository includes a root-level project profile template:
+
+    project_profile.example.yaml
+
+This file is a GitHub-safe starting point for configuring the multi-stage workflow. It does not replace the module-specific YAML or JSON configs. Instead, it records common project roots, external data locations, expected handoff files, module config locations, QC behavior, and whether to use the precomputed teacher-builder handoff.
+
+For a new machine, copy the example profile to a local profile and edit local paths:
+
+    Copy-Item project_profile.example.yaml project_profile.local.yaml
+    notepad project_profile.local.yaml
+
+The local profile should not be committed to GitHub. It is ignored by .gitignore and may contain machine-specific paths.
+
+The most reviewer-friendly setting is:
+
+    workflow_mode:
+      use_precomputed_teacher_handoff: true
+
+With this setting, users can use the included compressed fused teacher table and do not need to provide expression-training data, histology whole-slide image data, or rerun the upstream model_training workflows just to start the downstream Visium-facing spatial prediction workflow.
+
+Users who want full upstream reproducibility can set use_precomputed_teacher_handoff to false, configure the expression and histology training inputs, run model_training, and regenerate the teacher-builder outputs locally.
+
+
+<!-- PRECOMPUTED_TEACHER_HANDOFF_NOTE_START -->
+### Optional precomputed teacher handoff
+
+For reviewer convenience, the repository includes one curated compressed teacher-builder handoff:
 
 ```text
-Development Visium input -> spatial feature extraction
-                                      +
-                    included development response targets
-                                      |
-                       spatial-response model fitting
-                                      |
-                  interpretation + saved models/reference
-                                      |
-New Visium input -> spatial extraction -> predictions + weighted feature scores
+prediction_modeling_pipeline/teacher_builder/precomputed_governed_fused_teacher_table_102samples.tsv.gz
 ```
 
-The included package contains targets and matching spatial features for the same 102 development sections. It does not provide response labels for arbitrary new samples. New samples are scored with saved models, without refitting.
+This file is a compact derived fused teacher-label table for the 102-sample analysis. It allows downstream Visium-facing workflows to start from the governed teacher labels without rerunning expression-response model training, histology-response model training, or the upstream teacher-builder fusion steps.
 
-A separate [upstream rebuild](#rebuilding-expressionhistology-response-targets) trains expression and histology models from response-linked source data before constructing replacement development targets.
+The file is not raw expression data, raw histology data, whole-slide image data, h5ad data, or a trained model artifact. Users who want full upstream reproducibility can regenerate it by running `model_training/` followed by `teacher_builder/`; users who want to focus on downstream spatial prediction can use this precomputed handoff.
+<!-- PRECOMPUTED_TEACHER_HANDOFF_NOTE_END -->
+
+The main goal is to build a computational workflow that connects spatial tumor biology to drug response prediction. The workflow begins with spatial transcriptomics data, derives interpretable tissue-level features, links those features to teacher model outputs, evaluates whether spatial biology explains sample-treatment sensitivity or resistance, and applies the resulting interpretation atlas to new Visium samples.
+
+The project is designed around interpretability and scientific auditability rather than only maximizing prediction accuracy. The intended output is a set of pipeline components that can describe which spatial, histologic, expression, immune, stromal, metabolic, tumor-boundary, accessibility, and hotspot features may contribute to treatment response.
 
 ## Repository structure
 
-| Location | Purpose |
-|---|---|
-| [spatial_feature_identification_pipeline](spatial_feature_identification_pipeline/README.md) | Visium preprocessing and spatial feature extraction |
-| [model_training](prediction_modeling_pipeline/model_training/README.md) | Optional expression and histology model training |
-| [teacher_builder](prediction_modeling_pipeline/teacher_builder/README.md) | Response-target construction and included development package |
-| [spatial_prediction_model_V2](prediction_modeling_pipeline/spatial_prediction_model_V2/README.md) | Maintained spatial modeling, validation and fitted predictors |
-| [prediction_interpretation_model](prediction_modeling_pipeline/prediction_interpretation_model/README.md) | Feature weights and biological-theme summaries |
-| [spatial_transfer_inference_model](prediction_modeling_pipeline/spatial_transfer_inference_model/README.md) | Saved-reference feature alignment and weighted scoring |
-| [scripts](scripts) / [data_manifest](data_manifest) | Smoke test, source audit and public Visium staging |
-| [notebooks](notebooks/README.md) / [docs](docs) | Code reference and execution documentation |
-
-## Installation
-
-Use Python 3.12. From a fresh checkout, in PowerShell:
-
-```powershell
-py -3.12 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-if ($LASTEXITCODE -ne 0) { throw "Installation failed" }
-python -m pip check
-if ($LASTEXITCODE -ne 0) { throw "Dependency check failed" }
+```text
+.
+├── prediction_modeling_pipeline/
+│   ├── README.md
+│   ├── model_training/
+│   ├── teacher_builder/
+│   ├── spatial_prediction_model/
+│   ├── spatial_prediction_model_V2/
+│   ├── prediction_interpretation_model/
+│   └── spatial_transfer_inference_model/
+│
+├── spatial_feature_identification_pipeline/
+│   ├── README.md
+│   ├── run_pipeline.py
+│   ├── code/
+│   ├── configs/
+│   └── tools/
+│
+├── .gitignore
+└── .gitattributes
 ```
 
-On Linux/macOS, create the environment with `python3.12 -m venv .venv` and activate it with `source .venv/bin/activate`, then run the same pip commands.
+## Major components
 
-The main requirements include spatial extraction, modeling and tests. The compatibility constraints retain NumPy 1.26 for PyUCell 0.6. Original neural training has separate [optional dependencies](prediction_modeling_pipeline/model_training/requirements-model-training.txt), including PyTorch/torchvision and an OpenSlide native runtime. See [environment and resource notes](docs/REVIEWER_EXECUTION.md).
+### 1. Spatial feature identification pipeline
 
-## Quick start
+Path:
 
-Run the deterministic software smoke test and prepare the included development inputs:
-
-```powershell
-python scripts/run_smoke.py --output local/smoke
-if ($LASTEXITCODE -ne 0) { throw "Smoke test failed" }
-python prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/16_prepare_precomputed_teacher.py --manifest prediction_modeling_pipeline/teacher_builder/precomputed_handoff_manifest.json --output local/precomputed_handoff
-if ($LASTEXITCODE -ne 0) { throw "Response-target preparation failed" }
+```text
+spatial_feature_identification_pipeline/
 ```
 
-Use new or empty output directories. Inspect `local/smoke/smoke_report.json` and `local/precomputed_handoff/precomputed_handoff_manifest.json`.
+This pipeline processes Visium spatial transcriptomics samples and generates spatial feature tables used by downstream modeling. It includes scripts for input validation, sample processing, slide feature merging, multi-axis transcriptome labeling, accessibility profiles, hotspot metrics, context alignment, motif tables, model-ready feature table construction, overlays, visual summaries, and external study validation.
 
-The smoke test creates small synthetic data and fitted test objects. It exercises preprocessing, clustering, fusion, regression, interpretation, saved-model prediction and weighted scoring. It is not biological reproduction or a substitute for the full 1,000-permutation analysis.
+Main files:
 
-## Full Visium workflow
-
-Run commands from the repository root.
-
-### 1. Provide Visium input and extract features
-
-Stage public data as described below, or supply compatible sample folders. Copy the configuration and set its `input_root` and `output_root`:
-
-```powershell
-Copy-Item spatial_feature_identification_pipeline/configs/spatial_feature_pipeline_full_config.example.yaml spatial_feature_identification_pipeline/configs/spatial_feature_pipeline_full_config.local.yaml
-python spatial_feature_identification_pipeline/run_pipeline.py --config spatial_feature_identification_pipeline/configs/spatial_feature_pipeline_full_config.local.yaml --start 01 --end 10
-if ($LASTEXITCODE -ne 0) { throw "Spatial extraction failed" }
+```text
+spatial_feature_identification_pipeline/run_pipeline.py
+spatial_feature_identification_pipeline/code/
+spatial_feature_identification_pipeline/configs/
+spatial_feature_identification_pipeline/tools/
 ```
 
-The example uses `Visium_samples/visium_cohort_clean` and writes under `local/spatial_features`. Scientific parameters are defined by stage CLIs/constants, not unused configuration fields. Required clustering/scoring failures stop processing. Preserve the recorded gene-set source; an explicitly chosen curated library is not interchangeable with the development MSigDB library.
+Important conceptual outputs generated locally, but not committed:
 
-Step 09 produces the cumulative raw spatial measurement table. Step 10 constructs development modeling features. The included package supplies a matching validated development table if feature extraction is not being repeated.
-
-### 2. Fit spatial-response models
-
-After the quick-start preparation:
-
-```powershell
-python prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/00_run_spatial_prediction_model_v2.py --mode full --handoff-root local/precomputed_handoff --output-root local/spatial_model --max-workers 2 --full-step09-n-shuffles 1000 --full-step09-n-repeats 5
-if ($LASTEXITCODE -ne 0) { throw "Spatial modeling failed" }
+```text
+outputs/output_05_build_multi_axis_transcriptome_labels/
+outputs/output_06_build_accessibility_profiles/
+outputs/output_07_append_hotspot_metrics/
+outputs/output_08_01_context_alignment_and_metabolic_concordance/
+outputs/output_09_build_motif_tables/
+outputs/output_10_build_model_ready_table/
+outputs/output_11_overlay/
+outputs/output_12_data_analysis_and_visuals/
+outputs/output_13_external_study_validation/
 ```
 
-Full mode requires 1,000 within-treatment permutations and five repeated 80:20 splits. Reduced settings are restricted to smoke mode. Conditional testing uses the selected development feature and treatment families; see the [evaluation contract](prediction_modeling_pipeline/spatial_prediction_model_V2/docs/corrected_evaluation_and_prediction.md).
+The model-ready table produced locally by this pipeline is used as a core input to downstream prediction modeling and transfer inference.
 
-The command uses the included matching feature/target package. To substitute a newly extracted development feature table, use Script 16's explicit input/hash arguments after verifying sample identities and ordered features; do not silently replace the distributed package or assign its targets to another cohort.
+### 2. Model training
 
-### 3. Interpret and export fitted models
+Path:
 
-```powershell
-python prediction_modeling_pipeline/prediction_interpretation_model/scripts/00_run_prediction_interpretation_model.py --v2-run-root local/spatial_model --output-root local/interpretation --steps all
-if ($LASTEXITCODE -ne 0) { throw "Interpretation failed" }
-python prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/14_fit_predictor_bundles.py --run-root local/spatial_model --teacher-root local/precomputed_handoff --raw-feature-table local/spatial_features/output_09_build_motif_tables/slide_features_with_motif_tables.csv --output local/fitted_models
-if ($LASTEXITCODE -ne 0) { throw "Model export failed" }
+```text
+prediction_modeling_pipeline/model_training/
 ```
 
-Model export requires the corresponding raw development Step 09 table to save reference transformations. That raw table is not part of the compact package. Supply it from extraction or a verified matching run. Inspect output QC before applying models.
+This section contains source code and documentation for training expression and histology-based response models. These models provide teacher signals that are later fused with spatial biology features.
 
-### 4. Predict new Visium samples
+Subcomponents include:
 
-Extract new samples through Step 09 using a separate input/output configuration. Do not fit Step 10 transformations on an external batch.
-
-```powershell
-python prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/15_predict_spatial_features.py --bundles local/fitted_models --features YOUR_NEW_STEP09_TABLE --representation raw_reference --mode external --output local/new_predictions.tsv --contributions local/new_contributions.tsv
-if ($LASTEXITCODE -ne 0) { throw "Prediction failed" }
+```text
+prediction_modeling_pipeline/model_training/expression_response_model_v2/
+prediction_modeling_pipeline/model_training/histology_response_model_v2/
 ```
 
-Replace `YOUR_NEW_STEP09_TABLE` with the extracted table path. Models reuse their saved feature order, preprocessing and reference distributions. Missing required columns fail; explicit missing measurements use fitted imputation with coverage reporting. Unsupported omitted fields require a source-bound missingness manifest.
+Expression model scripts support treatment ontology construction, input validation, canonical training table construction, deployable model training, model auditing, and scoring Visium samples.
 
-For separate signed feature-weight scores, follow the [weighted-scoring commands](prediction_modeling_pipeline/spatial_transfer_inference_model/README.md). These scores are not fitted regression predictions.
+Histology model scripts support case label construction, slide manifest generation, tiling, tile training table construction, patient splitting, model training, control inference, and model auditing.
 
-## Rebuilding expression/histology response targets
+### 3. Teacher builder
 
-The [upstream training guide](prediction_modeling_pipeline/model_training/README.md) documents configuration and runner commands. Supply response-linked expression tables and whole-slide images/clinical labels, train the expression and histology models, then run [response-target construction](prediction_modeling_pipeline/teacher_builder/README.md).
+Path:
 
-The fusion model anchors modality estimates to treatment-specific priors using reliability, confidence and histology-control attenuation. The spatial regression target is `fused_prob_responder - treatment_prior`. Treatment keys preserve recorded profile components, not assumed simultaneous regimens.
+```text
+prediction_modeling_pipeline/teacher_builder/
+```
 
-## Inputs
+The teacher builder combines expression and histology response information into prediction-ready teacher tables. It includes governance logic, input validation, expression teacher construction, histology teacher construction, fusion, final teacher table generation, and QC.
 
-Visium extraction requires count matrices, gene identifiers, barcodes, spatial coordinates and the required image/registration metadata. Modeling requires matching section IDs, numeric features, an ordered feature manifest and section–treatment response targets. Prediction requires trusted saved model/reference artifacts and new spatial features.
+Main files:
 
-Raw data, trained models and full numerical result archives are not distributed. Rebuild them or supply verified copies; [artifact requirements](docs/artifact_requirements.json) describe the prerequisites without claiming a public model download.
+```text
+prediction_modeling_pipeline/teacher_builder/scripts/
+prediction_modeling_pipeline/teacher_builder/configs/
+prediction_modeling_pipeline/teacher_builder/README.md
+```
 
-## Outputs
+The teacher builder is intended to produce calibrated, audited, treatment-aware teacher outputs for the spatial prediction model.
 
-| Stage | Main outputs |
-|---|---|
-| Spatial extraction | Processed sections, annotation/QC tables, cumulative raw measurements and development feature table |
-| Response-target preparation | Matching response table, numeric features and ordered/hash-verified manifest |
-| Spatial modeling | Screening metrics, selected predictors, permutation results/checkpoints and final QC |
-| Interpretation | Signed feature weights, treatment summaries and biological-theme tables |
-| New-sample prediction | Fitted residuals, prior-anchored estimates where defined, contributions and coverage |
-| Weighted scoring | Signed feature scores, display rescaling, feature/theme contributions and coverage |
+### 4. Spatial prediction model
 
-Generated data, logs and models remain local and are ignored by Git.
+Path:
+
+```text
+prediction_modeling_pipeline/spatial_prediction_model/
+```
+
+This folder contains the earlier spatial prediction workflow retained for review, provenance, and comparison with the governed V2 implementation. It includes source scripts for validating prediction inputs, constructing spatial modeling datasets, training response models, predicting sample-treatment pairs, running QC, training residual models, generating interpretation outputs, and making supporting publication tables.
+
+The current primary implementation is `spatial_prediction_model_V2/`, but this earlier workflow is retained because it documents the project development path and remains useful for teacher review.
+
+Main files:
+
+```text
+prediction_modeling_pipeline/spatial_prediction_model/run_spatial_prediction_model.py
+prediction_modeling_pipeline/spatial_prediction_model/run_spatial_prediction_model.ps1
+prediction_modeling_pipeline/spatial_prediction_model/scripts/
+prediction_modeling_pipeline/spatial_prediction_model/configs/
+prediction_modeling_pipeline/spatial_prediction_model/docs/.gitkeep
+```
+
+### 5. Spatial prediction model V2
+
+Path:
+
+```text
+prediction_modeling_pipeline/spatial_prediction_model_V2/
+```
+
+This is the main current spatial prediction model implementation. It uses spatial feature tables and teacher outputs to train and interpret treatment response models.
+
+Major functions include:
+
+1. Input validation
+2. Modeling dataset construction
+3. Probability baseline modeling
+4. Pair-level residual modeling
+5. Residual biology registry construction
+6. Broad residual model training
+7. Filtered per-treatment residual models
+8. Tiered residual model curation
+9. Label shuffle validation
+10. Integrated interpretation package generation
+11. Publication table generation
+12. Output QC
+
+Main files:
+
+```text
+prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/
+prediction_modeling_pipeline/spatial_prediction_model_V2/src/spm_v2/
+prediction_modeling_pipeline/spatial_prediction_model_V2/configs/
+prediction_modeling_pipeline/spatial_prediction_model_V2/tests/
+```
+
+### 6. Prediction interpretation model
+
+Path:
+
+```text
+prediction_modeling_pipeline/prediction_interpretation_model/
+```
+
+This component converts spatial prediction model outputs into structured biological interpretation products. It prepares interpretation inputs, builds feature and treatment dictionaries, computes signed spatial effects, creates treatment interpretation cards, creates sample-level interpretations, builds a mechanism atlas, and packages final outputs.
+
+Main files:
+
+```text
+prediction_modeling_pipeline/prediction_interpretation_model/scripts/
+prediction_modeling_pipeline/prediction_interpretation_model/configs/
+prediction_modeling_pipeline/prediction_interpretation_model/docs/
+```
+
+Key outputs generated locally include treatment interpretation cards, sample-treatment signed interpretation scores, feature contribution tables, biology theme atlases, mechanism summaries, final publication tables, figures, reports, and QC packages.
+
+### 7. Spatial transfer inference model
+
+Path:
+
+```text
+prediction_modeling_pipeline/spatial_transfer_inference_model/
+```
+
+The spatial transfer inference model applies the completed prediction interpretation atlas to one or more new Visium samples. It takes a transfer-ready spatial feature table, aligns each sample to the frozen strict-feature registry, and scores sample-by-treatment spatial response alignment.
+
+This module is used after a Visium sample has been processed by the spatial feature identification pipeline. It supports both single-sample transfer and small multi-sample batches.
+
+Main files:
+
+```text
+prediction_modeling_pipeline/spatial_transfer_inference_model/scripts/
+prediction_modeling_pipeline/spatial_transfer_inference_model/configs/
+```
+
+Main outputs generated locally include:
+
+```text
+sample-by-treatment interpretation table
+feature contribution table
+theme contribution table
+confidence / evidence-support labels
+QC reports
+final transfer package
+```
+
+For a single sample with 27 validated treatment signatures, the expected output is 27 sample-treatment rows. For a four-sample batch with the same treatment atlas, the expected output is 108 sample-treatment rows.
+
+## Data availability and GitHub exclusions
+
+This repository does not include raw data or generated outputs.
+
+The following are intentionally excluded by `.gitignore`:
+
+```text
+.venv/
+outputs/
+logs/
+local/
+archive/
+backup/
+deprecated/
+private/
+temp/
+Visium_samples/
+raw data folders
+processed data folders
+large CSV and TSV outputs
+Excel files
+figures
+PDFs
+ZIP archives
+H5 and H5AD files
+model artifacts
+```
+
+This keeps the GitHub repository focused on source code, configuration, documentation, and small reproducible scaffolding files.
 
 ## Public Visium data staging
 
-```powershell
-python scripts/download_and_reconstruct_public_visium_sources.py --visium-root Visium_samples --dry-run
-python scripts/download_and_reconstruct_public_visium_sources.py --visium-root Visium_samples --download --stage
-if ($LASTEXITCODE -ne 0) { throw "Public data staging failed" }
+This repository includes a GitHub-safe staging helper for public Visium input files. The full raw and staged data folders are not committed, but the repository includes one curated staging manifest and a root-level script that can validate public source URLs, download/cache public source files, decompress or extract source files when needed, and organize them into the stable local cohort layout used by the spatial feature identification pipeline.
+
+Tracked staging manifest:
+
+    data_manifest/public_visium_cohort_staging_manifest.tsv
+
+Root-level staging script and documentation:
+
+    scripts/download_and_reconstruct_public_visium_sources.py
+    docs/PUBLIC_SOURCE_RECONSTRUCTION.md
+
+The script prepares files under a local Visium root such as:
+
+    Visium_samples/
+      raw_visium_new/
+      visium_cohort_clean/
+      public_visium_staging_inventory.tsv
+      public_visium_staging_summary.txt
+
+The spatial feature pipeline itself lives under `spatial_feature_identification_pipeline/`. Run the staging helper first only if you need to create a local public Visium input layout, then point the spatial feature config `input_root` to `YOUR_PROJECT_ROOT\Visium_samples\visium_cohort_clean`.
+
+The staged cohort preserves the project's stable internal sample IDs `SAMPLE_0000` through `SAMPLE_0102`; `SAMPLE_0049` remains part of the candidate input cohort even though it was skipped in later downstream processing. The TLS_VISIUM_USZ samples are staged from Zenodo record `14620362` / DOI `10.5281/zenodo.14620362` into `SAMPLE_0095` through `SAMPLE_0102`. Use `--skip-zenodo` to skip the large TLS archive while staging the other public files.
+
+Dry run example:
+
+    python scripts/download_and_reconstruct_public_visium_sources.py --repo-root "YOUR_PROJECT_ROOT" --visium-root "YOUR_PROJECT_ROOT\Visium_samples" --manifest data_manifest\public_visium_cohort_staging_manifest.tsv --download --stage --dry-run
+
+Real staging example:
+
+    python scripts/download_and_reconstruct_public_visium_sources.py --repo-root "YOUR_PROJECT_ROOT" --visium-root "YOUR_PROJECT_ROOT\Visium_samples" --manifest data_manifest\public_visium_cohort_staging_manifest.tsv --download --stage
+
+This public staging layer supports reproducibility without adding large raw or staged data folders to Git history. It does not fabricate biological metadata, clinical labels, cancer types, quality scores, response labels, or sample annotations; any generated `metadata.json` files contain only factual provenance fields derived from the staging manifest.
+
+## Expected local data
+
+The full local project used Visium spatial transcriptomics data and additional expression and histology resources. Large inputs and outputs are expected to exist outside GitHub in the user's local project directory.
+
+Typical local folders used during development included:
+
+```text
+YOUR_PROJECT_ROOT/spatial_feature_identification_pipeline/outputs
+YOUR_PROJECT_ROOT/prediction_modeling_pipeline/teacher_builder/outputs
+YOUR_PROJECT_ROOT/prediction_modeling_pipeline/spatial_prediction_model/outputs
+YOUR_PROJECT_ROOT/prediction_modeling_pipeline/spatial_prediction_model_V2/outputs
+YOUR_PROJECT_ROOT/prediction_modeling_pipeline/prediction_interpretation_model/outputs
+YOUR_PROJECT_ROOT/prediction_modeling_pipeline/spatial_transfer_inference_model/outputs
+YOUR_PROJECT_ROOT/Visium_samples
 ```
 
-Downloads can be large. Use `--sample-id SAMPLE_0000` for a selected sample, `--download` alone to cache, `--stage` alone to reconstruct from cached files, or `--skip-zenodo` to omit the large TLS archive explicitly. The manifest retains 103 candidate sample IDs; input availability and QC determine the usable cohort.
+These folders are not included in the repository.
 
-See [staging documentation](docs/PUBLIC_SOURCE_RECONSTRUCTION.md) for source URLs, checksum/resume behavior, inventories and errors.
+## Installation
 
-## Reproducibility and testing
+Create and activate a Python environment from the project root.
 
 ```powershell
-python -m pytest tests spatial_feature_identification_pipeline/tests prediction_modeling_pipeline/teacher_builder/tests prediction_modeling_pipeline/spatial_prediction_model_V2/tests prediction_modeling_pipeline/prediction_interpretation_model/tests prediction_modeling_pipeline/spatial_transfer_inference_model/tests -q
-if ($LASTEXITCODE -ne 0) { throw "Tests failed" }
-python scripts/audit_public_repository.py
-if ($LASTEXITCODE -ne 0) { throw "Source audit failed" }
-python -m pip check
+cd "YOUR_PROJECT_ROOT"
+
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+python -m pip install --upgrade pip
 ```
 
-Tests cover fusion arithmetic, hashes and identities, feature order/missingness, deterministic permutation behavior, saved-model reload, batch/reordering invariance, failure propagation and safe staging. CI runs unit tests, the synthetic smoke test, package verification and the source/link audit without downloading scientific datasets.
+Install requirements for the specific component you want to run. For example:
 
-## Data included with the repository
+```powershell
+pip install -r spatial_feature_identification_pipeline\requirements.txt
+pip install -r prediction_modeling_pipeline\spatial_prediction_model_V2\requirements.txt
+```
 
-The only analysis-derived input package contains 34,881 section–treatment pairs, 374 recorded treatment profiles, the matching 102-section/661-feature table, an ordered feature manifest and an integrity manifest. See [package details](prediction_modeling_pipeline/teacher_builder/README.md). Small synthetic test fixtures and the public-source staging manifest are also included.
+If a component does not include a standalone requirements file, install the requirements listed in that component's README or runbook. Some components may require additional packages depending on whether expression, histology, spatial transcriptomics, visualization, interpretation, or transfer-inference steps are being run.
 
-## Citation
+## Running the spatial feature identification pipeline
 
-Associated working manuscript (unpublished): Eric Rosenn, *A Visium Transcriptomics Workflow Linking Tumor Spatial Features to Treatment Response*. The manuscript remains a draft. Software citation metadata are provided in [CITATION.cff](CITATION.cff); no DOI or journal publication is asserted.
+From the spatial feature identification pipeline folder:
+
+```powershell
+cd "YOUR_PROJECT_ROOT\spatial_feature_identification_pipeline"
+
+Copy-Item .\configs\visium_cohort_clean.example.yaml .\configs\visium_cohort_clean.local.yaml
+python run_pipeline.py --config configs\visium_cohort_clean.local.yaml
+```
+
+Configuration files are stored in:
+
+```text
+spatial_feature_identification_pipeline/configs/
+```
+
+Run instructions are in `spatial_feature_identification_pipeline/README.md`; tracked configuration templates are in `spatial_feature_identification_pipeline/configs/`.
+
+## Running the teacher builder
+
+From the teacher builder folder:
+
+```powershell
+cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\teacher_builder"
+```
+
+Use the configuration files in:
+
+```text
+prediction_modeling_pipeline/teacher_builder/configs/
+```
+
+Scripts are located in:
+
+```text
+prediction_modeling_pipeline/teacher_builder/scripts/
+```
+
+See `prediction_modeling_pipeline/teacher_builder/README.md` and `prediction_modeling_pipeline/teacher_builder/configs/README.md` for run instructions and config-template usage.
+
+## Running spatial prediction model V2
+
+From the V2 spatial prediction model folder:
+
+```powershell
+cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_prediction_model_V2"
+```
+
+Run the V2 entry point with a completed teacher/spatial handoff root.
+
+Smoke run example:
+
+```powershell
+python scripts\00_run_spatial_prediction_model_v2.py `
+    --mode smoke `
+    --handoff-root "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_prediction_model\outputs\_derived_handoffs\residual_prior_adjusted_filtered_20260506_223625\full102_handoff" `
+    --max-workers 0 `
+    --open-output
+```
+
+Full run example:
+
+```powershell
+python scripts\00_run_spatial_prediction_model_v2.py `
+    --mode full `
+    --handoff-root "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_prediction_model\outputs\_derived_handoffs\residual_prior_adjusted_filtered_20260506_223625\full102_handoff" `
+    --max-workers 0 `
+    --full-step09-n-shuffles 1000 `
+    --full-step09-n-repeats 5 `
+    --open-output
+```
+
+The smoke test should be run before a full cohort run. A smoke test is a lightweight end-to-end check that confirms the pipeline can execute and produce the expected output structure; it is not a full biological validation.
+
+`--max-workers 0` lets Step 09 select an automatic worker count while keeping individual XGBoost fits single-threaded inside each worker.
+
+## Running the prediction interpretation model
+
+From the prediction interpretation model folder:
+
+```powershell
+cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\prediction_interpretation_model"
+```
+
+Run the interpretation model entry point with a completed spatial prediction model V2 run:
+
+```powershell
+python scripts\00_run_prediction_interpretation_model.py `
+    --project-root "YOUR_PROJECT_ROOT" `
+    --model-root "." `
+    --v2-run-root "<path-to-completed-spatial-prediction-model-V2-run>" `
+    --run-name "prediction_interpretation_model_full_local" `
+    --output-root "outputs\prediction_interpretation_model_full_local" `
+    --steps all `
+    --open-output
+```
+
+This produces signed spatial effects, treatment interpretation cards, sample-level interpretation tables, mechanism atlases, final publication tables, figures, reports, and QC packages.
+
+## Running spatial transfer inference
+
+From the spatial transfer inference model folder:
+
+```powershell
+cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_transfer_inference_model"
+```
+
+Run the transfer entry point with a completed prediction interpretation model run and a transfer-ready feature table. If using the resolved PIM transfer file map, copy `configs\resolved_pim_transfer_file_map.example.json` to `configs\resolved_pim_transfer_file_map.json` and edit local paths before running:
+
+```powershell
+python scripts\00_run_spatial_transfer_inference_model.py `
+    --project-root "YOUR_PROJECT_ROOT" `
+    --model-root . `
+    --pim-run-root "<path-to-completed-prediction-interpretation-model-run>" `
+    --single-slide-feature-table "<path-to-transfer-ready-model_input_numeric.csv>" `
+    --run-name "spatial_transfer_inference_example" `
+    --output-root "outputs\spatial_transfer_inference_example" `
+    --sample-id "TRANSFER_BATCH" `
+    --steps all
+```
+
+The transfer feature table should contain one row per sample and a `sample_id` column. The transfer model can be run on a single sample or on a small batch of samples.
+
+A smoke test can be run before a real transfer run to confirm that the pipeline can execute and produce the expected output structure.
+
+## Repository status
+
+This repository is a source-focused project snapshot. It includes code, configuration, documentation, and tests, but excludes local outputs and large files.
+
+At the time of repository preparation, the codebase included:
+
+1. Spatial feature identification pipeline source code
+2. External validation scripts
+3. Teacher builder source code
+4. Expression response model V2 source code
+5. Histology response model V2 source code
+6. Earlier spatial prediction model source code retained for review and provenance
+7. Spatial prediction model V2 source code
+8. Prediction interpretation model source code
+9. Spatial transfer inference model source code
+10. Documentation and runbooks
+11. GitHub-safe `.gitignore` and `.gitattributes`
+
+## Reproducibility notes
+
+Generated output folders are not tracked in Git. To reproduce results, users need to provide local input data, update configuration paths, run the relevant pipeline components, and regenerate outputs locally.
+
+Each major submodule contains its own README or runbook. Begin with the component README before running scripts.
+
+Recommended order for a full local workflow:
+
+1. Prepare Visium data and manifests
+2. Run the spatial feature identification pipeline
+3. Train or load expression and histology response models
+4. Build teacher tables
+5. Run spatial prediction model V2
+6. Run prediction interpretation model
+7. Run spatial transfer inference on new Visium sample(s), if applying the frozen atlas to external or newly processed samples
+8. Review QC, validation, interpretation, and transfer reports
+
+## Current limitations
+
+This repository is under active development. Some paths in configuration files may need to be updated for a new local machine. Generated outputs, trained model files, raw spatial data, WSI files, validation figures, transfer outputs, and large result tables are not included. Some scripts may require project-specific inputs not distributed with the repository.
+
+The model outputs are intended for research interpretation. They should be interpreted as spatial response-alignment evidence rather than clinical treatment recommendations.
 
 ## License
 
@@ -194,4 +544,8 @@ Released under the [MIT License](LICENSE).
 
 ## Contact
 
-For software questions or reproducibility issues, open a [GitHub issue](https://github.com/ericrosenn1/spatial-omics-tumor-drug-response-prediction/issues).
+Repository owner:
+
+```text
+ericrosenn1
+```
