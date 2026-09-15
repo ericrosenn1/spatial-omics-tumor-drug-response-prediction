@@ -1,13 +1,30 @@
 """Public execution defaults must not silently change the analysis or interpreter."""
 import importlib.util
 from pathlib import Path
+import re
 import subprocess
 import sys
 
 import pytest
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER = ROOT / "prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/00_run_spatial_prediction_model_v2.py"
+
+
+def test_documented_root_profile_source_and_supplied_paths_exist():
+    readme = (ROOT / "README.md").read_text(encoding="utf-8-sig")
+    sources = re.findall(r"^\s*Copy-Item\s+(project_profile\.\S+)\s+", readme, re.MULTILINE)
+    assert sources, "README root profile setup must identify its source template"
+    for source in sources:
+        profile = yaml.safe_load((ROOT / source).read_text(encoding="utf-8-sig"))
+        supplied = profile["precomputed_handoffs"]
+        for key in ["fused_teacher_table_gz", "authority_manifest", "spatial_features", "feature_manifest"]:
+            assert (ROOT / supplied[key]).is_file(), supplied[key]
+        for config in profile["module_configs"].values():
+            assert (ROOT / config["example_config"]).is_file(), config["example_config"]
+            if "precomputed_entry_point" in config:
+                assert (ROOT / config["precomputed_entry_point"]).is_file(), config["precomputed_entry_point"]
 
 
 def test_active_python_is_preserved():

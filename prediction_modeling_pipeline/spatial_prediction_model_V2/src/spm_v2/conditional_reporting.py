@@ -24,6 +24,21 @@ def atom_json(path, data):
     temp.replace(path)
 
 
+def report_distinct_theme_counts(themes, features, registry, accepted):
+    """Count distinct accepted treatments per theme, retaining feature incidence."""
+    themes = themes.copy()
+    incidence_column = "validated_treatment_feature_incidence_count"
+    if incidence_column not in themes.columns:
+        themes[incidence_column] = themes["validated_treatment_count"]
+    selected = features[features.drug_key.isin(accepted)]
+    selected = selected.merge(registry[["feature_name", "biological_theme"]], on="feature_name", validate="many_to_one")
+    distinct = selected.groupby("biological_theme", dropna=False).drug_key.nunique()
+    themes["validated_treatment_count"] = themes.biological_theme.map(distinct).fillna(0).astype(int)
+    if (themes.validated_treatment_count > len(accepted)).any():
+        raise ValueError("Impossible distinct treatment-theme count")
+    return themes
+
+
 def complete_reporting(output):
     output = Path(output)
     audit = json.loads((output / "10_independent_numerical_audit/audit_summary.json").read_text())
@@ -59,15 +74,7 @@ def complete_reporting(output):
     original_path = themes_path.with_name(themes_path.stem + "_historical_incidence_aggregation.tsv")
     if not original_path.exists():
         original_path.write_bytes(themes_path.read_bytes())
-    original = pd.read_csv(original_path, sep="\t")
-    selected = features[features.drug_key.isin(accepted)]
-    selected = selected.merge(registry[["feature_name", "biological_theme"]], on="feature_name", validate="many_to_one")
-    distinct = selected.groupby("biological_theme", dropna=False).drug_key.nunique()
-    incidence = original.set_index("biological_theme").validated_treatment_count
-    themes["validated_treatment_feature_incidence_count"] = themes.biological_theme.map(incidence)
-    themes["validated_treatment_count"] = themes.biological_theme.map(distinct).fillna(0).astype(int)
-    if (themes.validated_treatment_count > len(accepted)).any():
-        raise ValueError("Impossible distinct treatment-theme count")
+    themes = report_distinct_theme_counts(themes, features, registry, accepted)
     temp = themes_path.with_name(themes_path.name + ".tmp")
     themes.to_csv(temp, sep="\t", index=False)
     temp.replace(themes_path)

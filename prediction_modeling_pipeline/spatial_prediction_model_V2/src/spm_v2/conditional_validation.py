@@ -31,6 +31,7 @@ from sklearn.model_selection import train_test_split
 from threadpoolctl import threadpool_limits
 
 from .model_training import make_xgb_pipeline, select_features_training_only
+from .conditional_reporting import report_distinct_theme_counts
 
 SCHEMA = "conditional_step09_numerical_v1"
 METRICS = ["test_pearson", "test_spearman", "test_r2", "test_mae", "test_rmse",
@@ -571,6 +572,8 @@ def consolidate(output, task_paths):
         recurrent = pd.DataFrame(columns=["feature_name", "validated_treatment_count", "observed_selection_count", "mean_gain_importance", "max_gain_importance", "biological_theme"])
     if themes.empty:
         themes = pd.DataFrame(columns=["biological_theme", "n_features", "validated_treatment_count", "total_gain_importance", "max_gain_importance", "example_features"])
+    accepted = set(results.loc[results.validated_for_step10, "drug_key"])
+    themes = report_distinct_theme_counts(themes, features, registry, accepted)
     validated = results[results.validated_for_step10].copy()
     rejected = results[~results.validated_for_step10].copy()
     validated["step10_validation_status"] = "label_shuffle_validated"
