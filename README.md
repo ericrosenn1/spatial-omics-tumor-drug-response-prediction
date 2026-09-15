@@ -1,8 +1,8 @@
 # Spatial Omics Tumor Drug Response Prediction
 
-This repository contains a source-only version of a spatial omics and machine learning project for identifying tumor microenvironment features from Visium spatial transcriptomics data and using those features to support tumor drug response prediction and interpretation.
+This repository contains a spatial omics and machine learning workflow for identifying tumor microenvironment features from Visium spatial transcriptomics data and using those features to support tumor drug response prediction and interpretation.
 
-The project integrates four major analysis layers:
+The workflow integrates four major analysis layers:
 
 1. Spatial feature identification from Visium samples
 2. Teacher model construction from expression and histology response models
@@ -28,7 +28,7 @@ For a new machine, copy the example profile to a local profile and edit local pa
 
 The local profile should not be committed to GitHub. It is ignored by .gitignore and may contain machine-specific paths.
 
-The most reviewer-friendly setting is:
+The most user-friendly setting is:
 
     workflow_mode:
       use_precomputed_teacher_handoff: true
@@ -41,7 +41,7 @@ Users who want full upstream reproducibility can set use_precomputed_teacher_han
 <!-- PRECOMPUTED_TEACHER_HANDOFF_NOTE_START -->
 ### Optional precomputed teacher handoff
 
-For reviewer convenience, the repository includes one curated compressed teacher-builder handoff:
+For user convenience, the repository includes one curated compressed teacher-builder handoff:
 
 ```text
 prediction_modeling_pipeline/teacher_builder/precomputed_governed_fused_teacher_table_102samples.tsv.gz
@@ -54,7 +54,7 @@ The file is not raw expression data, raw histology data, whole-slide image data,
 
 The main goal is to build a computational workflow that connects spatial tumor biology to drug response prediction. The workflow begins with spatial transcriptomics data, derives interpretable tissue-level features, links those features to teacher model outputs, evaluates whether spatial biology explains sample-treatment sensitivity or resistance, and applies the resulting interpretation atlas to new Visium samples.
 
-The project is designed around interpretability and scientific auditability rather than only maximizing prediction accuracy. The intended output is a set of pipeline components that can describe which spatial, histologic, expression, immune, stromal, metabolic, tumor-boundary, accessibility, and hotspot features may contribute to treatment response.
+The workflow is designed around interpretability and scientific auditability rather than only maximizing prediction accuracy. The intended output is a set of pipeline components that can describe which spatial, histologic, expression, immune, stromal, metabolic, tumor-boundary, accessibility, and hotspot features may contribute to treatment response.
 
 ## Repository structure
 
@@ -268,7 +268,7 @@ For a single sample with 27 validated treatment signatures, the expected output 
 
 ## Data availability and GitHub exclusions
 
-This repository does not include raw data or generated outputs.
+This repository does not include raw data or large generated-output archives; the compact precomputed teacher/development handoff described above is included.
 
 The following are intentionally excluded by `.gitignore`:
 
@@ -351,22 +351,22 @@ These folders are not included in the repository.
 
 ## Installation
 
-Create and activate a Python environment from the project root.
+Use Python 3.12 for the workflow. Spatial feature extraction and V2 modeling use separate virtual environments because their validated dependency versions differ. Both virtual environments use the same Python 3.12 installation.
 
 ```powershell
 cd "YOUR_PROJECT_ROOT"
 
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+# Spatial feature environment
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r spatial_feature_identification_pipeline\requirements.txt
+.\.venv\Scripts\python.exe -m pip check
 
-python -m pip install --upgrade pip
-```
-
-Install requirements for the specific component you want to run. For example:
-
-```powershell
-pip install -r spatial_feature_identification_pipeline\requirements.txt
-pip install -r prediction_modeling_pipeline\spatial_prediction_model_V2\requirements.txt
+# V2 modeling environment
+py -3.12 -m venv .venv_v2
+.\.venv_v2\Scripts\python.exe -m pip install --upgrade pip
+.\.venv_v2\Scripts\python.exe -m pip install -r prediction_modeling_pipeline\spatial_prediction_model_V2\requirements-v2-reproducible.txt
+.\.venv_v2\Scripts\python.exe -m pip check
 ```
 
 If a component does not include a standalone requirements file, install the requirements listed in that component's README or runbook. Some components may require additional packages depending on whether expression, histology, spatial transcriptomics, visualization, interpretation, or transfer-inference steps are being run.
@@ -420,14 +420,20 @@ From the V2 spatial prediction model folder:
 cd "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_prediction_model_V2"
 ```
 
-Run the V2 entry point with a completed teacher/spatial handoff root.
+Prepare the included precomputed development handoff, then run the V2 entry point with the reproducible V2 environment.
+
+```powershell
+& "YOUR_PROJECT_ROOT\.venv_v2\Scripts\python.exe" scripts\16_prepare_precomputed_teacher.py `
+    --manifest "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\teacher_builder\precomputed_handoff_manifest.json" `
+    --output "YOUR_PROJECT_ROOT\local\precomputed_handoff"
+```
 
 Smoke run example:
 
 ```powershell
-python scripts\00_run_spatial_prediction_model_v2.py `
+& "YOUR_PROJECT_ROOT\.venv_v2\Scripts\python.exe" scripts\00_run_spatial_prediction_model_v2.py `
     --mode smoke `
-    --handoff-root "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_prediction_model\outputs\_derived_handoffs\residual_prior_adjusted_filtered_20260506_223625\full102_handoff" `
+    --handoff-root "YOUR_PROJECT_ROOT\local\precomputed_handoff" `
     --max-workers 0 `
     --open-output
 ```
@@ -435,9 +441,9 @@ python scripts\00_run_spatial_prediction_model_v2.py `
 Full run example:
 
 ```powershell
-python scripts\00_run_spatial_prediction_model_v2.py `
+& "YOUR_PROJECT_ROOT\.venv_v2\Scripts\python.exe" scripts\00_run_spatial_prediction_model_v2.py `
     --mode full `
-    --handoff-root "YOUR_PROJECT_ROOT\prediction_modeling_pipeline\spatial_prediction_model\outputs\_derived_handoffs\residual_prior_adjusted_filtered_20260506_223625\full102_handoff" `
+    --handoff-root "YOUR_PROJECT_ROOT\local\precomputed_handoff" `
     --max-workers 0 `
     --full-step09-n-shuffles 1000 `
     --full-step09-n-repeats 5 `
@@ -525,12 +531,11 @@ Recommended order for a full local workflow:
 
 1. Prepare Visium data and manifests
 2. Run the spatial feature identification pipeline
-3. Train or load expression and histology response models
-4. Build teacher tables
-5. Run spatial prediction model V2
-6. Run prediction interpretation model
-7. Run spatial transfer inference on new Visium sample(s), if applying the frozen atlas to external or newly processed samples
-8. Review QC, validation, interpretation, and transfer reports
+3. Use the included precomputed fused-teacher handoff, or optionally train the expression and histology response models and rebuild the teacher tables
+4. Run spatial prediction model V2
+5. Run prediction interpretation model
+6. Run spatial transfer inference on new Visium sample(s), if applying the frozen atlas to external or newly processed samples
+7. Review QC, validation, interpretation, and transfer reports
 
 ## Current limitations
 
