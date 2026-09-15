@@ -6,3 +6,4 @@ authors:
   - family-names: Rosenn
     given-names: Eric
 repository-code: "https://github.com/ericrosenn1/spatial-omics-tumor-drug-response-prediction"
+license: MIT
