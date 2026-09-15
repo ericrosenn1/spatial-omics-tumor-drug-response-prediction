@@ -164,6 +164,7 @@ def should_package(path: Path, output_root: Path) -> bool:
     rel = path.relative_to(output_root).as_posix()
 
     excluded_fragments = [
+        "/08_qc_and_final_package/03_final_zip/",
         "/02_copied_v2_tables/packages/",
         "/02_copied_v2_tables/tables/per_treatment_test_predictions_long.tsv",
         "/02_copied_v2_tables/tables/broad_residual_feature_evidence_long.tsv",
@@ -205,6 +206,9 @@ def build_package_file_manifest(files: List[Path], output_root: Path) -> pd.Data
     Keeps data movement, QC, or reporting behavior explicit and auditable."""
     rows = []
     for path in files:
+        # The manifest describes archived payloads; it cannot hash its own bytes.
+        if path == output_root / "08_qc_and_final_package/02_manifests/final_package_file_manifest.tsv":
+            continue
         try:
             rows.append({
                 "relative_path": path.relative_to(output_root).as_posix(),
