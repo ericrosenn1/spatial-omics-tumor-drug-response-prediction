@@ -118,3 +118,35 @@ def test_invalid_restart_preserves_previous_merged_table(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="failed or produced no successful samples"):
         merge.main()
     assert merged.read_bytes() == previous
+
+
+@pytest.mark.parametrize("damage", ["wrong_id", "missing_id_value", "multiple_rows", "empty"])
+def test_invalid_fresh_feature_rows_cannot_enter_merged_cohort(tmp_path, monkeypatch, damage):
+    row = cached_sample(tmp_path)
+    row["status"] = "OK"
+    feature_path = Path(row["slide_feature_row"])
+    features = pd.read_csv(feature_path)
+    if damage == "wrong_id":
+        features["sample_id"] = "SAMPLE_OTHER"
+    elif damage == "missing_id_value":
+        features["sample_id"] = None
+    elif damage == "multiple_rows":
+        features = pd.concat([features, features], ignore_index=True)
+    else:
+        features = features.iloc[:0]
+    features.to_csv(feature_path, index=False)
+    report = tmp_path / "output_02_process_samples_reports/processing_report.csv"
+    report.parent.mkdir()
+    pd.DataFrame([row]).to_csv(report, index=False)
+    merged = tmp_path / "output_03_merge_slide_features/merged_slide_features.csv"
+    merged.parent.mkdir()
+    previous = b"sample_id,n_spots\nSAMPLE_PREVIOUS,500\n"
+    merged.write_bytes(previous)
+    monkeypatch.setattr(merge, "load_config", lambda _: {"output_root": tmp_path})
+    monkeypatch.setattr(merge, "validate_config", lambda cfg: cfg)
+    monkeypatch.setattr(sys, "argv", ["03_merge_slide_features.py", "--config", "unused"])
+    with pytest.raises(RuntimeError, match="failed or produced no successful samples"):
+        merge.main()
+    assert merged.read_bytes() == previous
+    saved_report = pd.read_csv(merged.parent / "merge_report.csv")
+    assert saved_report.iloc[0]["status"] == "ERROR"

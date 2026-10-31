@@ -1,11 +1,11 @@
 # Execution and resource requirements
 
-Use Python 3.12 and the root `requirements.txt` in an isolated environment. The compatibility constraints retain NumPy 1.26 because PyUCell 0.6 requires NumPy <2. `python -m pip check` must pass. Historical installation/script filenames remain supported.
+Use Python 3.12 and the [root installation instructions](../README.md#installation). The `.venv` spatial environment uses the root `requirements.txt`; its compatibility constraints retain NumPy 1.26 because PyUCell 0.6 requires NumPy <2. The separate `.venv_v2` environment uses `requirements-v2-reproducible.txt` for the established V2 numerical analysis. Run `python -m pip check` in each environment. Historical installation/script filenames remain supported.
 
 ## Software smoke test
 
 ```powershell
-python scripts/run_smoke.py --output local/smoke
+& .\.venv\Scripts\python.exe scripts/run_smoke.py --output local/smoke
 if ($LASTEXITCODE -ne 0) { throw "Smoke test failed" }
 ```
 
@@ -24,6 +24,8 @@ Three permutations and two splits test software execution only. No clinical labe
 The [spatial modeling guide](../prediction_modeling_pipeline/spatial_prediction_model_V2/README.md) and [new-sample guide](../prediction_modeling_pipeline/spatial_transfer_inference_model/README.md) contain executable CLI templates.
 
 The included package does not label arbitrary unseen samples. Replacing its development features with a new extraction requires explicit sample/feature validation and source hashes; do not relabel a new cohort as the original development set.
+
+Steps 01–02 report matched and unmatched sample counts and retain the existing teacher/spatial intersection. Duplicate or missing identities and zero sample overlap stop the run; explicit missing measurements remain missing.
 
 ## Resources not distributed
 

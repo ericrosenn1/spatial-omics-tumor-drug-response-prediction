@@ -166,10 +166,15 @@ def read_one_feature_file(feature_path):
     """Read one slide feature file and add source path metadata."""
     feature_path = Path(feature_path)
     df = pd.read_csv(feature_path)
+    sample_id = feature_path.parents[1].name
+
+    if len(df) != 1:
+        raise ValueError(f"Expected one feature row for {sample_id}, found {len(df)}: {feature_path}")
 
     if "sample_id" not in df.columns:
-        sample_id = feature_path.parents[1].name
         df["sample_id"] = sample_id
+    elif df["sample_id"].isna().any() or not df["sample_id"].astype(str).eq(sample_id).all():
+        raise ValueError(f"Feature row sample_id does not match sample directory {sample_id}: {feature_path}")
 
     df["source_feature_file"] = str(feature_path)
 

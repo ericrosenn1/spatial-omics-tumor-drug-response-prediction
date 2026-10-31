@@ -80,6 +80,8 @@ rejected. Completed extraction records bind source and member hashes. Partial
 extractions are repaired, and existing staged files are compared with their
 source content before reuse. Gzip outputs are published only after successful
 decompression. Download, extraction or staging failures return a nonzero status.
+Failures are recorded per source in the inventory. Independent successful
+sources are still staged, while failed sources cannot reuse stale cached files.
 
 `--dry-run` performs no writes. No biological metadata are inferred from folder
 names: generated metadata records only the manifest's source identifiers.

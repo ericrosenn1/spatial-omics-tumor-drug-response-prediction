@@ -6,7 +6,7 @@ Fit pooled and treatment-specific regressors to spatial features and prior-adjus
 
 Prepare the [included development inputs](../teacher_builder/README.md) first. The input directory contains `model_input_numeric.csv`, `visium_fused_teacher_table.tsv`, and the ordered `feature_manifest.csv`.
 
-Run from the repository root:
+Run from the repository root, with the [reproducible `.venv_v2` environment](../../README.md#installation) activated so that `python` uses the established numerical versions:
 
 ```powershell
 python prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/00_run_spatial_prediction_model_v2.py --mode full --handoff-root local/precomputed_handoff --output-root local/spatial_model --max-workers 2 --full-step09-n-shuffles 1000 --full-step09-n-repeats 5

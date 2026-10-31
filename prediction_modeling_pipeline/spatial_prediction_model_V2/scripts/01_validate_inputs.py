@@ -51,6 +51,8 @@ if str(SRC_ROOT) not in sys.path:
 
 from spm_v2.data_discovery import (
     column_presence_summary,
+    handoff_sample_coverage,
+    handoff_validation_errors,
     load_handoff_tables,
     table_shape_summary,
     validate_handoff_files,
@@ -135,7 +137,8 @@ def main() -> int:
             "residual_max": float(vals.max()),
         }
 
-    validation_status = "pass" if len(missing_required) == 0 else "fail"
+    validation_errors = handoff_validation_errors(teacher, spatial, manifest)
+    validation_status = "fail" if validation_errors else "pass"
 
     run_summary = {
         "status": validation_status,
@@ -144,7 +147,9 @@ def main() -> int:
         **teacher_summary,
         **spatial_summary,
         **residual_stats,
+        **handoff_sample_coverage(teacher, spatial),
         "missing_required_columns": int(len(missing_required)),
+        "validation_errors": validation_errors,
     }
 
     write_json(run_summary, output_root / "v2_input_validation_summary.json")
@@ -175,6 +180,8 @@ def main() -> int:
         f"Spatial rows: {spatial_summary['n_spatial_rows']}",
         f"Treatments: {teacher_summary['n_unique_treatments']}",
         f"Missing required columns: {len(missing_required)}",
+        *[f"{key}: {value}" for key, value in handoff_sample_coverage(teacher, spatial).items()],
+        *[f"Validation error: {error}" for error in validation_errors],
         f"Output manifest rows: {len(output_manifest)}",
     ]
 

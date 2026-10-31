@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .data_discovery import find_feature_column
+from .data_discovery import find_feature_column, handoff_validation_errors
 from .feature_governance import classify_feature, infer_theme, strict_biology_manifest
 from .target_building import build_broad_residual_targets, treatment_eligibility
 
@@ -131,6 +131,9 @@ def build_dataset_bundle(
     manifest: pd.DataFrame,
     residual_col: str = "fused_residual_vs_prior",
 ) -> dict:
+    errors = handoff_validation_errors(teacher, spatial, manifest, residual_col)
+    if errors:
+        raise ValueError("Invalid modeling handoff: " + "; ".join(errors))
     teacher = teacher.copy()
     spatial = spatial.copy()
 

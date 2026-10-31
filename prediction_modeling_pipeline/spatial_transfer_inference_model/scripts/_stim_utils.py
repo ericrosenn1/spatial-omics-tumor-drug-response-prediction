@@ -160,7 +160,16 @@ def build_output_manifest(root: Path) -> pd.DataFrame:
 
 def save_output_manifest(output_root: Path) -> Path:
     path = Path(output_root) / "spatial_transfer_inference_model_output_manifest.tsv"
-    write_tsv(path, build_output_manifest(Path(output_root)))
+    manifest = build_output_manifest(Path(output_root))
+    if not manifest.empty:
+        # An inventory cannot describe its own changing bytes or the archive
+        # that will contain it. Keep these generated containers out on reruns.
+        manifest = manifest[
+            manifest["relative_path"].ne(path.name)
+            & manifest["relative_path"].ne("05_qc_and_transfer_package/02_manifests/transfer_package_file_manifest.tsv")
+            & ~manifest["relative_path"].str.startswith("05_qc_and_transfer_package/03_transfer_zip/")
+        ]
+    write_tsv(path, manifest)
     return path
 
 
@@ -272,21 +281,32 @@ def package_zip(zip_path: Path, root: Path, include_prefixes: Optional[Sequence[
     zip_path = Path(zip_path)
     root = Path(root)
     ensure_dir(zip_path.parent)
+    temporary = zip_path.with_suffix(zip_path.suffix + ".tmp")
 
     files: List[Path] = []
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue
-        if path == zip_path:
+        if path == zip_path or path == temporary:
             continue
         rel = path.relative_to(root).as_posix()
+        if rel.startswith("05_qc_and_transfer_package/03_transfer_zip/"):
+            continue
         if include_prefixes and not any(rel.startswith(prefix) for prefix in include_prefixes):
             continue
         files.append(path)
 
-    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
-        for path in files:
-            zf.write(path, path.relative_to(root).as_posix())
+    try:
+        with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+            for path in files:
+                zf.write(path, path.relative_to(root).as_posix())
+        with zipfile.ZipFile(temporary) as zf:
+            bad_member = zf.testzip()
+            if bad_member is not None:
+                raise ValueError(f"Corrupt transfer archive member: {bad_member}")
+        temporary.replace(zip_path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
     return files
 

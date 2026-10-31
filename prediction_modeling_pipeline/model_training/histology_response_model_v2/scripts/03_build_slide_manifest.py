@@ -124,9 +124,9 @@ def main():
     args = parser.parse_args()
 
     cfg = load_config(args.config)
-    project_dir = Path(cfg.get("project_dir", ".")).resolve()
+    project_dir = Path(cfg.get("project_root", cfg.get("project_dir", "."))).resolve()
 
-    output_root = Path(cfg["output_root"])
+    output_root = resolve_path(project_dir, cfg["output_root"])
     out_dir = output_root / "03_slide_manifest"
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -291,7 +291,7 @@ def main():
         how="left",
     )
 
-    manifest["has_slide"] = manifest["svs_path"].astype(str).str.len() > 0
+    manifest["has_slide"] = manifest["svs_path"].notna() & manifest["svs_path"].astype(str).str.strip().ne("")
 
     manifest_path = out_dir / "slide_manifest.tsv"
     # The slide manifest is the file contract between clinical labeling and image tiling.
@@ -300,6 +300,9 @@ def main():
     matched = manifest[manifest["has_slide"]].copy()
     matched_path = out_dir / "slide_manifest_matched.tsv"
     matched.to_csv(matched_path, sep="\t", index=False)
+    # Step 04 consumes this labeled, locally matched slide handoff. Keep the
+    # historical manifest names above for existing reports and callers.
+    matched.to_csv(out_dir / "slide_manifest_with_labels.tsv", sep="\t", index=False)
 
     strict_local_ids = sorted((use_strict_ids if use_strict_ids else set(selected_labels["patient_id"])) & local_patients)
     manifest_patients = set(manifest.loc[manifest["has_slide"], "patient_id"].astype(str))

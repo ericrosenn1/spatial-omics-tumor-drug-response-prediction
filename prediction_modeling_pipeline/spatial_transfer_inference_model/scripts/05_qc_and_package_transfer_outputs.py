@@ -26,7 +26,6 @@ import pandas as pd
 
 from _stim_utils import (
     add_qc,
-    build_output_manifest,
     ensure_dir,
     open_folder,
     package_zip,
@@ -97,6 +96,25 @@ def upstream_qc_findings(output_root: Path) -> List[dict]:
                 findings.append({**row, "check_id": "upstream_" + path.parts[-3] + "_" + str(row.get("check_id", "unknown")),
                                  "detail": str(row.get("detail", "")) + " Source: " + str(path.relative_to(output_root))})
     return findings
+
+
+def refresh_package_manifest(output_root: Path, manifest_path: Path) -> None:
+    """Describe the final payload bytes without hashing the manifest itself."""
+    rows = []
+    for path in sorted(output_root.rglob("*")):
+        if not path.is_file() or path == manifest_path:
+            continue
+        relative = path.relative_to(output_root).as_posix()
+        if relative.startswith("05_qc_and_transfer_package/03_transfer_zip/"):
+            continue
+        rows.append({
+            "relative_path": relative,
+            "absolute_path": str(path),
+            "size_bytes": path.stat().st_size,
+            "suffix": path.suffix.lower(),
+            "sha256": sha256_file(path),
+        })
+    write_tsv(manifest_path, pd.DataFrame(rows))
 
 
 def main() -> int:
@@ -173,27 +191,19 @@ def main() -> int:
             in_range = bool(vals.dropna().between(0, 1).all()) if vals.notna().any() else False
             add_qc(qc, "research_score_0_1_range", "pass" if in_range else "warn", in_range, True, "Research 0-1 score should be in [0,1].")
 
-        all_files = [p for p in sorted(output_root.rglob("*")) if p.is_file()]
-        package_manifest_rows = []
-        for path in all_files:
-            if "05_qc_and_transfer_package/03_transfer_zip" in path.as_posix():
-                continue
-            package_manifest_rows.append({
-                "relative_path": path.relative_to(output_root).as_posix(),
-                "absolute_path": str(path),
-                "size_bytes": path.stat().st_size,
-                "suffix": path.suffix.lower(),
-                "sha256": sha256_file(path),
-            })
-        package_manifest = pd.DataFrame(package_manifest_rows)
         package_manifest_path = manifest_dir / "transfer_package_file_manifest.tsv"
-        write_tsv(package_manifest_path, package_manifest)
+        refresh_package_manifest(output_root, package_manifest_path)
 
         zip_path = package_dir / "spatial_transfer_inference_package.zip"
-        packaged_files = package_zip(zip_path, output_root)
-        zip_size = zip_path.stat().st_size if zip_path.exists() else 0
+        probe_path = package_dir / "spatial_transfer_inference_package.validation.zip"
+        try:
+            packaged_files = package_zip(probe_path, output_root)
+            probe_exists = probe_path.is_file()
+            zip_size = probe_path.stat().st_size if probe_exists else 0
+        finally:
+            probe_path.unlink(missing_ok=True)
 
-        add_qc(qc, "transfer_zip_exists", "pass" if zip_path.exists() else "fail", zip_path.exists(), True, "Transfer inference ZIP package created.")
+        add_qc(qc, "transfer_zip_exists", "pass" if probe_exists else "fail", probe_exists, True, "Candidate ZIP created and validated before final publication.")
         add_qc(qc, "transfer_zip_nonempty", "pass" if zip_size > 0 else "fail", zip_size, ">0", "Transfer inference ZIP package should be nonempty.")
         add_qc(qc, "transfer_package_file_count", "pass" if len(packaged_files) >= 20 else "warn", len(packaged_files), ">=20", "Transfer package should include outputs, reports, QC, and provenance.")
 
@@ -266,15 +276,29 @@ def main() -> int:
     write_text_report(report_path, "\n".join(report_lines))
 
     try:
-        packaged_files = package_zip(zip_path, output_root)
-        summary["package_file_count"] = len(packaged_files)
-        summary["final_zip_size_bytes"] = zip_path.stat().st_size if zip_path.exists() else 0
+        # Finish all payloads before hashing or archiving them. The archive's
+        # own byte size cannot be stored inside it without a circular update.
         summary["final_qc_report"] = str(report_path)
         write_json(output_root / "spatial_transfer_inference_model_step05_summary.json", summary)
+        save_output_manifest(output_root)
+        refresh_package_manifest(output_root, package_manifest_path)
+        summary["package_file_count"] = len(read_table(package_manifest_path)) + 1
+        write_json(output_root / "spatial_transfer_inference_model_step05_summary.json", summary)
+        report_lines = [
+            f"package_file_count: {summary['package_file_count']}"
+            if line.startswith("package_file_count:") else line
+            for line in report_lines
+        ]
+        write_text_report(report_path, "\n".join(report_lines))
+        save_output_manifest(output_root)
+        refresh_package_manifest(output_root, package_manifest_path)
+        packaged_files = package_zip(zip_path, output_root)
     except Exception as exc:
-        warnings.append(f"Package refresh after report failed: {exc}")
-
-    save_output_manifest(output_root)
+        status = "fail"
+        errors.append(f"Final transfer package creation failed: {exc}")
+        summary.update(status=status, errors=errors)
+        write_json(output_root / "spatial_transfer_inference_model_step05_summary.json", summary)
+        write_text_report(report_path, "\n".join(report_lines) + "\n\nFINAL PACKAGE FAILED\n" + str(exc))
 
     print("")
     print("=" * 72)
