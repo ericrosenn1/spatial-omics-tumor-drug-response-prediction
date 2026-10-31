@@ -143,6 +143,14 @@ def read_merged_table(input_path):
 # Percentile ranking helpers
 # =========================
 
+def percentile_rank(values):
+    """Rank observed values without inferring a rank from a single sample."""
+    values = pd.to_numeric(values, errors="coerce")
+    if values.notna().sum() <= 1:
+        return pd.Series(np.nan, index=values.index)
+    return values.rank(pct=True)
+
+
 def percentile_rank_within_groups(block, groups):
     """Convert numeric columns into percentile ranks within dataset groups."""
     ranked = pd.DataFrame(index=block.index)
