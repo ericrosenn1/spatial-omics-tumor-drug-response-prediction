@@ -84,7 +84,7 @@ def test_public_manifest_is_valid():
     staging.validate_manifest(staging.read_tsv(manifest), manifest)
 
 
-@pytest.mark.parametrize("failed_source", ["direct", "tls"])
+@pytest.mark.parametrize("failed_source", ["direct", "tls", "tls_metadata"])
 def test_failed_acquisition_preserves_independent_staging_and_full_inventory(tmp_path, monkeypatch, failed_source):
     rows = []
     for index in (1, 2):
@@ -94,11 +94,16 @@ def test_failed_acquisition_preserves_independent_staging_and_full_inventory(tmp
                    source_url=f"https://example.org/{index}", raw_cache_relative_path=f"raw/{index}",
                    cohort_relative_path=f"visium_cohort_clean/SAMPLE_{index:04d}/matrix.mtx")
         rows.append(row)
-    if failed_source == "tls":
+    if failed_source in {"tls", "tls_metadata"}:
         rows[0]["source_type"] = staging.TLS_SOURCE_TYPE
+    if failed_source == "tls":
         monkeypatch.setattr(staging, "prepare_tls_archive", lambda *a, **k: {
             "status": "zenodo_checksum_failed", "checksum_status": "md5_mismatch"
         })
+    elif failed_source == "tls_metadata":
+        def missing_metadata():
+            raise OSError("source unavailable")
+        monkeypatch.setattr(staging, "fetch_zenodo_file_metadata", missing_metadata)
     manifest = tmp_path / "manifest.tsv"
     staging.write_tsv(manifest, rows, staging.MANIFEST_COLUMNS)
     data = tmp_path / "data"
@@ -119,5 +124,7 @@ def test_failed_acquisition_preserves_independent_staging_and_full_inventory(tmp
     inventory = staging.read_tsv(data / "public_visium_staging_inventory.tsv")
     matrices = [row for row in inventory if row["file_role"] == "matrix"]
     assert len(matrices) == 2
-    assert matrices[0]["status"] == ("download_failed" if failed_source == "direct" else "zenodo_checksum_failed")
+    assert matrices[0]["status"] == {
+        "direct": "download_failed", "tls": "zenodo_checksum_failed", "tls_metadata": "zenodo_metadata_failed"
+    }[failed_source]
     assert matrices[1]["status"] == "staged"

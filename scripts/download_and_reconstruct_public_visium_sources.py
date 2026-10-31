@@ -234,7 +234,11 @@ def prepare_tls_archive(visium_root: Path, tls_rows: list[dict[str, str]], downl
 
     checksum_status = "not_checked"
     if download:
-        metadata = fetch_zenodo_file_metadata()
+        try:
+            metadata = fetch_zenodo_file_metadata()
+        except Exception as exc:
+            print(f"ZENODO METADATA FAILED: {exc}")
+            return {"status": "zenodo_metadata_failed", "checksum_status": "not_checked"}
         ok, status = download_file(metadata["url"], zip_path, overwrite=overwrite)
         if not ok:
             return {"status": status, "checksum_status": "not_checked"}
