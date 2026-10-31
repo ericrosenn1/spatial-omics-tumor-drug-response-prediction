@@ -87,6 +87,8 @@ def main():
     else:
         lines.append("No critical issues detected")
     (out / "input_audit_summary.txt").write_text("\n".join(lines), encoding="utf-8")
+    if issues:
+        raise ValueError("Histology input validation failed: " + "; ".join(issues))
     print("DONE")
     print(out)
 

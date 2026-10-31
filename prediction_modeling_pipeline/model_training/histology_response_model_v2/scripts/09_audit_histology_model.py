@@ -61,7 +61,7 @@ def main():
     approve_delta=float(cfg["teacher_export"].get("approve_if_image_treatment_beats_treatment_only_by_auc",0.03))
     approve_auc=float(cfg["teacher_export"].get("approve_if_patient_auc_at_least",0.60))
     # Teacher approval requires adequate held-out AUC and improvement over treatment_only.
-    approved=bool(np.isfinite(image_treat_auc) and image_treat_auc>=approve_auc and (not np.isfinite(delta) or delta>=approve_delta))
+    approved=bool(np.isfinite(image_treat_auc) and image_treat_auc>=approve_auc and np.isfinite(delta) and delta>=approve_delta)
     # Reliability is bounded so teacher_builder can shrink histology probabilities conservatively.
     reliability=max(float(cfg["teacher_export"].get("reliability_floor",0.05)), min(float(cfg["teacher_export"].get("reliability_ceiling",0.85)), max(0.0, delta if np.isfinite(delta) else 0.0)))
     rows=[{

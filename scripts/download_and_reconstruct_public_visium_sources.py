@@ -234,7 +234,11 @@ def prepare_tls_archive(visium_root: Path, tls_rows: list[dict[str, str]], downl
 
     checksum_status = "not_checked"
     if download:
-        metadata = fetch_zenodo_file_metadata()
+        try:
+            metadata = fetch_zenodo_file_metadata()
+        except Exception as exc:
+            print(f"ZENODO METADATA FAILED: {exc}")
+            return {"status": "zenodo_metadata_failed", "checksum_status": "not_checked"}
         ok, status = download_file(metadata["url"], zip_path, overwrite=overwrite)
         if not ok:
             return {"status": status, "checksum_status": "not_checked"}
@@ -549,7 +553,7 @@ def main() -> int:
         rows_by_sample[row["sample_id"]].append(row)
 
     inventory_rows: list[dict[str, object]] = []
-    acquisition_failures: list[str] = []
+    acquisition_failures: dict[str, str] = {}
     non_tls_rows = [row for row in rows if row.get("source_type") != TLS_SOURCE_TYPE]
     tls_rows = [row for row in rows if row.get("source_type") == TLS_SOURCE_TYPE]
 
@@ -565,29 +569,40 @@ def main() -> int:
                 continue
             ok, status = download_file(source_url(row), raw_path, overwrite=args.overwrite)
             if not ok:
-                acquisition_failures.append(status)
+                acquisition_failures[raw_rel] = status
                 print(f"DOWNLOAD PROBLEM: {status} {source_url(row)}")
 
     if args.stage and not args.dry_run:
         for raw_rel in sorted({row["raw_cache_relative_path"] for row in non_tls_rows if row.get("source_archive_type") == "geo_tar"}):
+            if raw_rel in acquisition_failures:
+                continue
             raw_path = manifest_path(visium_root, raw_rel)
             ok, status = extract_tar_if_needed(raw_path, raw_path.parent / (raw_path.name + "_extracted"), args.overwrite)
             if not ok:
-                acquisition_failures.append(status)
+                acquisition_failures[raw_rel] = status
 
     tls_status = prepare_tls_archive(visium_root, tls_rows, args.download, args.dry_run, args.overwrite, args.skip_zenodo, extract=args.stage)
+    tls_failed = tls_status.get("status") not in {
+        "not_needed", "skipped_zenodo", "dry_run", "downloaded_or_cached", "zenodo_ready"
+    }
 
     staged_samples: set[str] = set()
     if args.stage:
         for row in rows:
-            if acquisition_failures or tls_status.get("status") in {"zenodo_checksum_failed", "zenodo_extract_failed", "download_failed", "missing_zenodo_zip"}:
-                # Do not stage stale cached members after a failed acquisition.
-                break
-            if row.get("source_type") == TLS_SOURCE_TYPE and args.skip_zenodo:
+            is_tls = row.get("source_type") == TLS_SOURCE_TYPE
+            failure = tls_status.get("status") if is_tls and tls_failed else None
+            if not is_tls:
+                failure = acquisition_failures.get(row["raw_cache_relative_path"])
+            if failure or (is_tls and args.skip_zenodo):
+                # Failed sources must not reuse stale cache entries. Independent
+                # successful sources still receive staging and inventory records.
+                status = failure or "skipped_zenodo"
                 inventory = {
                     "sample_id": row["sample_id"], "file_role": row["file_role"], "source_type": row["source_type"],
                     "source_url": source_url(row), "raw_cache_path": row["raw_cache_relative_path"], "cohort_path": row["cohort_relative_path"],
-                    "status": "skipped_zenodo", "bytes_written_or_existing": 0, "checksum_status": "skipped_zenodo", "notes": row.get("notes", ""),
+                    "status": status, "bytes_written_or_existing": 0,
+                    "checksum_status": tls_status.get("checksum_status", "not_available") if is_tls else "not_available",
+                    "notes": row.get("notes", ""),
                 }
             else:
                 checksum_status = tls_status.get("checksum_status", "not_available") if row.get("source_type") == TLS_SOURCE_TYPE else "not_available"
@@ -627,7 +642,7 @@ def main() -> int:
 
     failure_statuses = {"download_failed", "missing_source_url", "missing_raw_source", "zenodo_checksum_failed", "zenodo_extract_failed", "missing_zenodo_zip", "download_empty", "tar_extract_failed"}
     print(f"acquisition_failures: {acquisition_failures}")
-    if acquisition_failures or status_counts["stage_failed"] or any(status in failure_statuses for status in status_counts) or tls_status.get("status") in failure_statuses:
+    if acquisition_failures or tls_failed or status_counts["stage_failed"] or any(status in failure_statuses for status in status_counts):
         return 2
     return 0
 

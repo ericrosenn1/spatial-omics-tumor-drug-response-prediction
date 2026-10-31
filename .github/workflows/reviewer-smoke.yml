@@ -65,14 +65,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Coverage data merge failed: $LASTEXITCODE" }
           & .\.venv\Scripts\python.exe -m coverage xml -o coverage.xml
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath coverage.xml)) { throw "coverage.xml generation failed" }
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@0b35c9ecc4f0529d0eb674914510c22f85b196b4 # v7.1.0
-        with:
-          files: ./coverage.xml
-          disable_search: true
-          fail_ci_if_error: true
-          use_oidc: true
-          verbose: true
       - name: Execute documented seeded smoke and public handoff
         run: |
           & .\.venv\Scripts\python.exe scripts/run_smoke.py --output local/smoke
@@ -83,3 +75,11 @@ jobs:
         run: |
           & .\.venv\Scripts\python.exe scripts/audit_public_repository.py --output local/source_audit.json
           if ($LASTEXITCODE -ne 0) { throw "Source audit failed: $LASTEXITCODE" }
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@0b35c9ecc4f0529d0eb674914510c22f85b196b4 # v7.1.0
+        with:
+          files: ./coverage.xml
+          disable_search: true
+          fail_ci_if_error: true
+          use_oidc: true
+          verbose: true

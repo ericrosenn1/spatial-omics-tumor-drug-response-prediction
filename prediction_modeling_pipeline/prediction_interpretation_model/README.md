@@ -4,7 +4,7 @@ Summarize a completed spatial model run using signed feature effects, treatment 
 
 ## Run
 
-From the repository root:
+From the repository root, with the [reproducible `.venv_v2` environment](../../README.md#installation) activated:
 
 ```powershell
 python prediction_modeling_pipeline/prediction_interpretation_model/scripts/00_run_prediction_interpretation_model.py --v2-run-root local/spatial_model --output-root local/interpretation --steps all

@@ -82,3 +82,49 @@ def test_download_only_failure_is_nonzero(tmp_path, monkeypatch):
 def test_public_manifest_is_valid():
     manifest = ROOT / staging.DEFAULT_MANIFEST
     staging.validate_manifest(staging.read_tsv(manifest), manifest)
+
+
+@pytest.mark.parametrize("failed_source", ["direct", "tls", "tls_metadata"])
+def test_failed_acquisition_preserves_independent_staging_and_full_inventory(tmp_path, monkeypatch, failed_source):
+    rows = []
+    for index in (1, 2):
+        row = {column: "" for column in staging.MANIFEST_COLUMNS}
+        row.update(sample_id=f"SAMPLE_{index:04d}", file_role="matrix", source_type="geo",
+                   source_dataset="fixture", source_archive_type="direct_file",
+                   source_url=f"https://example.org/{index}", raw_cache_relative_path=f"raw/{index}",
+                   cohort_relative_path=f"visium_cohort_clean/SAMPLE_{index:04d}/matrix.mtx")
+        rows.append(row)
+    if failed_source in {"tls", "tls_metadata"}:
+        rows[0]["source_type"] = staging.TLS_SOURCE_TYPE
+    if failed_source == "tls":
+        monkeypatch.setattr(staging, "prepare_tls_archive", lambda *a, **k: {
+            "status": "zenodo_checksum_failed", "checksum_status": "md5_mismatch"
+        })
+    elif failed_source == "tls_metadata":
+        def missing_metadata():
+            raise OSError("source unavailable")
+        monkeypatch.setattr(staging, "fetch_zenodo_file_metadata", missing_metadata)
+    manifest = tmp_path / "manifest.tsv"
+    staging.write_tsv(manifest, rows, staging.MANIFEST_COLUMNS)
+    data = tmp_path / "data"
+    (data / "raw").mkdir(parents=True)
+    (data / "raw/1").write_bytes(b"stale failed source")
+
+    def download(url, path, **kwargs):
+        if url.endswith("/1"):
+            return False, "download_failed"
+        path.write_bytes(b"verified independent source")
+        return True, "downloaded"
+
+    monkeypatch.setattr(staging, "download_file", download)
+    monkeypatch.setattr(sys, "argv", ["staging", "--manifest", str(manifest), "--visium-root", str(data), "--download", "--stage"])
+    assert staging.main() == 2
+    assert not (data / rows[0]["cohort_relative_path"]).exists()
+    assert (data / rows[1]["cohort_relative_path"]).read_bytes() == b"verified independent source"
+    inventory = staging.read_tsv(data / "public_visium_staging_inventory.tsv")
+    matrices = [row for row in inventory if row["file_role"] == "matrix"]
+    assert len(matrices) == 2
+    assert matrices[0]["status"] == {
+        "direct": "download_failed", "tls": "zenodo_checksum_failed", "tls_metadata": "zenodo_metadata_failed"
+    }[failed_source]
+    assert matrices[1]["status"] == "staged"

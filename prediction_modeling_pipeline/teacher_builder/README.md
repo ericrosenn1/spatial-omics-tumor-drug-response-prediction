@@ -14,7 +14,7 @@ The following resources are distributed together and bound by [precomputed_hando
 
 There are 33,759 histology-only, 471 expression-only and 651 both-modality pairs. Missing feature measurements remain missing. Treatment keys retain their recorded components; they do not establish simultaneous administration.
 
-From the repository root:
+From the repository root, with an environment from the [installation guide](../../README.md#installation) activated (`.venv_v2` is used for preparation in the root quick start):
 
 ```powershell
 python prediction_modeling_pipeline/spatial_prediction_model_V2/scripts/16_prepare_precomputed_teacher.py --manifest prediction_modeling_pipeline/teacher_builder/precomputed_handoff_manifest.json --output local/precomputed_handoff
@@ -25,7 +25,7 @@ Use a new or empty output folder. Preparation verifies source hashes, duplicate 
 
 ## Rebuild from expression and histology inputs
 
-Copy [the full example configuration](configs/visium_teacher_builder_governed_full.example.yaml) to a `*.local.yaml` file and configure the response-linked source tables, fitted expression models, fitted histology model and audit, raw/processed Visium inputs, and matching spatial feature table/manifest. These upstream resources are not included.
+Copy [the full example configuration](configs/visium_teacher_builder_governed_full.example.yaml) to a `*.local.yaml` file and configure the response-linked source tables, fitted expression models, fitted histology model and audit, raw/processed Visium inputs, and matching spatial feature table/manifest. These upstream resources are not included. Use the spatial `.venv` and any required [training dependencies](../model_training/README.md), and pass that environment's executable as `-Python`.
 
 ```powershell
 & prediction_modeling_pipeline/teacher_builder/run_teacher_builder_governed.ps1 -Config YOUR_CONFIG_PATH -StartAt 1 -StopAt 6 -Python YOUR_PYTHON_EXECUTABLE

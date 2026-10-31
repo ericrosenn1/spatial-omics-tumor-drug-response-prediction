@@ -1,6 +1,9 @@
 # GitHub-safe root project profile.
 # Copy this file to project_profile.local.yaml and edit local paths before running.
 # project_profile.local.yaml is machine-specific and should not be committed.
+# This is a planning inventory, not an executable runner configuration.
+# Apply paths to the appropriate module CLI/config; see each module's README.
+# Use the spatial and reproducible V2 Python environments separately.
 
 project:
   project_root: "YOUR_PROJECT_ROOT"

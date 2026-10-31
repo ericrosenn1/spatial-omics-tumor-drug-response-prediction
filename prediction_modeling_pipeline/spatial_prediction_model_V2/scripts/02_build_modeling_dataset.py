@@ -42,7 +42,7 @@ if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
 
 
-from spm_v2.data_discovery import load_handoff_tables, validate_handoff_files
+from spm_v2.data_discovery import handoff_sample_coverage, load_handoff_tables, validate_handoff_files
 from spm_v2.dataset_builder import build_dataset_bundle
 from spm_v2.io_utils import ensure_dir, write_json, write_table, write_text_report
 from spm_v2.provenance import write_run_provenance
@@ -125,6 +125,7 @@ def main() -> int:
         "n_teacher_rows": int(len(teacher)),
         "n_spatial_samples": int(spatial["sample_id"].astype(str).nunique()),
         "n_feature_manifest_rows": int(len(manifest)),
+        **handoff_sample_coverage(teacher, spatial),
         "n_broad_governed_candidate_features": int(len(broad_feature_cols)),
         "n_v2_strict_biology_registry_features": 0,
         "strict_biology_registry_status": "not_generated_yet",

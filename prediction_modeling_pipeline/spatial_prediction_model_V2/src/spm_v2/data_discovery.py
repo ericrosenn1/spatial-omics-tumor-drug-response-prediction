@@ -14,6 +14,83 @@ REQUIRED_HANDOFF_FILES = {
 }
 
 
+def handoff_sample_coverage(teacher: pd.DataFrame, spatial: pd.DataFrame) -> dict[str, int]:
+    """Expose the existing inner join's cohort coverage without changing it."""
+    if any("sample_id" not in table or table.columns.duplicated().any() for table in (teacher, spatial)):
+        return {}
+    teacher_ids = set(teacher.sample_id.dropna().astype(str))
+    spatial_ids = set(spatial.sample_id.dropna().astype(str))
+    return {
+        "matched_sample_count": len(teacher_ids & spatial_ids),
+        "teacher_only_sample_count": len(teacher_ids - spatial_ids),
+        "spatial_only_sample_count": len(spatial_ids - teacher_ids),
+    }
+
+
+def handoff_validation_errors(
+    teacher: pd.DataFrame,
+    spatial: pd.DataFrame,
+    manifest: pd.DataFrame,
+    residual_col: str = "fused_residual_vs_prior",
+) -> list[str]:
+    """Check table identities before joins can multiply records or be empty.
+
+    Missing residual measurements remain allowed; they are omitted by the
+    existing target builder. This check does not select a new cohort or infer
+    missing feature/response values.
+    """
+    errors = []
+    for label, table, required in [
+        ("teacher", teacher, ["sample_id", "drug_key", residual_col]),
+        ("spatial_numeric", spatial, ["sample_id"]),
+        ("feature_manifest", manifest, []),
+    ]:
+        if table.empty:
+            errors.append(f"{label}: table is empty")
+        if table.columns.duplicated().any():
+            errors.append(f"{label}: duplicate column names")
+            continue
+        missing = [column for column in required if column not in table]
+        if missing:
+            errors.append(f"{label}: missing required columns: {', '.join(missing)}")
+        for column in ("sample_id", "drug_key"):
+            if column in required and column in table:
+                values = table[column]
+                if values.isna().any() or values.astype(str).str.strip().eq("").any():
+                    errors.append(f"{label}: missing or blank {column}")
+
+    if not teacher.columns.duplicated().any():
+        if {"sample_id", "drug_key"} <= set(teacher):
+            identities = teacher[["sample_id", "drug_key"]].astype(str)
+            if identities.duplicated().any():
+                errors.append("teacher: duplicate sample_id/drug_key pairs")
+        if residual_col in teacher:
+            values = pd.to_numeric(teacher[residual_col], errors="coerce")
+            malformed = teacher[residual_col].notna() & values.isna()
+            if malformed.any() or values.isin([float("inf"), -float("inf")]).any():
+                errors.append(f"teacher: nonnumeric or infinite {residual_col}")
+            if not values.notna().any():
+                errors.append(f"teacher: no observed {residual_col} values")
+    if not spatial.columns.duplicated().any() and "sample_id" in spatial:
+        if spatial.sample_id.astype(str).duplicated().any():
+            errors.append("spatial_numeric: duplicate sample_id values")
+    coverage = handoff_sample_coverage(teacher, spatial)
+    if coverage and coverage["matched_sample_count"] == 0:
+        errors.append("teacher and spatial_numeric: no matching sample_id values")
+    if not manifest.empty and not manifest.columns.duplicated().any():
+        try:
+            feature_col = find_feature_column(manifest)
+        except ValueError as exc:
+            errors.append(str(exc))
+        else:
+            names = manifest[feature_col]
+            if names.isna().any() or names.astype(str).str.strip().eq("").any():
+                errors.append("feature_manifest: missing or blank feature names")
+            if names.astype(str).duplicated().any():
+                errors.append("feature_manifest: duplicate feature names")
+    return errors
+
+
 def handoff_paths(handoff_root: str | Path) -> dict[str, Path]:
     root = Path(handoff_root)
     return {key: root / rel for key, rel in REQUIRED_HANDOFF_FILES.items()}

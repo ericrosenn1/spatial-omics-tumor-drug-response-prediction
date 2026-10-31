@@ -216,9 +216,12 @@ def main():
     summary_path.write_text("\n".join(lines), encoding="utf-8")
 
     print("")
-    print("DONE")
     print("Wrote:", summary_path)
     print("Wrote:", audit_dir / "deployable_model_audit_checks.tsv")
+    failures = [check["item"] for check in checks if check["status"] == "FAIL"]
+    if failures:
+        raise ValueError("Deployable expression model audit failed: " + ", ".join(failures))
+    print("DONE")
 
 
 if __name__ == "__main__":

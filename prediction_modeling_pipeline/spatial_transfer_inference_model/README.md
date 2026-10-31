@@ -12,7 +12,7 @@ Raw data, trained models and the complete feature-weight bundle are not distribu
 
 ## Saved-reference weighted scoring
 
-Run from the repository root after model and interpretation export:
+Run from the repository root after model and interpretation export, with the [reproducible `.venv_v2` environment](../../README.md#installation) activated:
 
 ```powershell
 python prediction_modeling_pipeline/spatial_transfer_inference_model/scripts/alignment_bundle.py prepare-raw --bundle local/feature_weights.json --feature-reference-bundles local/fitted_models --raw-feature-table YOUR_NEW_STEP09_TABLE --output-feature-table local/new_reference_features.tsv

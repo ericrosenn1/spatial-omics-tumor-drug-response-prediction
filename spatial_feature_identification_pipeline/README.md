@@ -8,7 +8,7 @@ Each sample must have a stable `SAMPLE_*` folder with supported 10x-style matrix
 
 The [public staging guide](../docs/PUBLIC_SOURCE_RECONSTRUCTION.md) describes supported source layouts.
 
-From the repository root:
+From the repository root, with the [spatial `.venv` environment](../README.md#installation) activated so that `python` uses the declared spatial dependencies:
 
 ```powershell
 Copy-Item spatial_feature_identification_pipeline/configs/spatial_feature_pipeline_full_config.example.yaml spatial_feature_identification_pipeline/configs/spatial_feature_pipeline_full_config.local.yaml
