@@ -86,6 +86,22 @@ def normalize_bool(series: pd.Series) -> pd.Series:
     return series.astype(str).str.lower().isin(["true", "1", "yes", "y"])
 
 
+def select_final_shap_candidates(screening_summary: pd.DataFrame, max_final_models: int | None) -> pd.DataFrame:
+    """Rank all qualifying treatments, with an optional limit on final SHAP fitting."""
+
+    if max_final_models is not None and max_final_models < 1:
+        raise ValueError("max_final_models must be a positive integer or None")
+
+    selected = screening_summary.loc[screening_summary["selected_for_final_shap"].eq(True)].copy()
+    selected = selected.sort_values(
+        ["test_pearson_mean", "test_r2_mean", "rmse_improvement_vs_baseline_mean"],
+        ascending=False,
+    )
+    if max_final_models is not None:
+        selected = selected.head(max_final_models)
+    return selected
+
+
 def add_treatment_stats(pair_df: pd.DataFrame, target_col: str) -> pd.DataFrame:
     """Summarize per-treatment support and residual target variability."""
 
@@ -609,7 +625,12 @@ def main() -> int:
     parser.add_argument("--test-size", type=float, default=0.20)
     parser.add_argument("--max-features-per-split", type=int, default=60)
     parser.add_argument("--max-features-final", type=int, default=60)
-    parser.add_argument("--max-final-shap-models", type=int, default=30)
+    parser.add_argument(
+        "--max-final-shap-models",
+        type=int,
+        default=None,
+        help="Optional maximum number of final SHAP models (default: no cap; use 30 for the original study selection).",
+    )
     parser.add_argument("--min-final-pearson", type=float, default=0.20)
     parser.add_argument("--min-final-positive-fraction", type=float, default=0.60)
     parser.add_argument("--n-estimators", type=int, default=120)
@@ -618,6 +639,8 @@ def main() -> int:
     parser.add_argument("--random-state", type=int, default=42)
     parser.add_argument("--max-shap-rows", type=int, default=1000)
     args = parser.parse_args()
+    if args.max_final_shap_models is not None and args.max_final_shap_models < 1:
+        parser.error("--max-final-shap-models must be a positive integer")
 
     run_root = Path(args.run_root)
     dataset_root = Path(args.dataset_root)
@@ -755,11 +778,9 @@ def main() -> int:
         & (pd.to_numeric(screening_summary["rmse_improvement_vs_baseline_mean"], errors="coerce") > 0)
     )
 
-    selected_summary = screening_summary[screening_summary["selected_for_final_shap"] == True].copy()
-    selected_summary = selected_summary.sort_values(
-        ["test_pearson_mean", "test_r2_mean", "rmse_improvement_vs_baseline_mean"],
-        ascending=False,
-    ).head(args.max_final_shap_models)
+    selected_summary = select_final_shap_candidates(
+        screening_summary, args.max_final_shap_models
+    )
 
     selection_fallback_used = False
 
@@ -876,6 +897,7 @@ def main() -> int:
         "n_repeats": int(args.n_repeats),
         "n_step05_registry_features": int(len(registry)),
         "n_features_used": int(len(feature_cols)),
+        "max_final_shap_models": args.max_final_shap_models,
         "n_selected_final_models": int(len(final_manifest)),
         "n_shap_success_models": int(shap_success_count),
         "best_screened_treatment": best_treatment,
