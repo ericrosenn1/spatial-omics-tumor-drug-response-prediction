@@ -178,6 +178,12 @@ def main() -> int:
     parser.add_argument("--step04-max-samples", type=int, default=80)
     parser.add_argument("--step04-max-treatments", type=int, default=160)
     parser.add_argument("--step07-max-treatments", type=int, default=60)
+    parser.add_argument(
+        "--max-final-shap-models",
+        type=int,
+        default=None,
+        help="Optional cap on Step 07 final SHAP models (default: no cap; use 30 to reproduce the original selection).",
+    )
 
     parser.add_argument("--step09-n-shuffles", type=int, default=25)
     parser.add_argument("--step09-n-repeats", type=int, default=3)
@@ -190,6 +196,8 @@ def main() -> int:
 
     if args.mode == "full" and (args.full_step09_n_shuffles != 1000 or args.full_step09_n_repeats != 5):
         parser.error("Full mode requires 1000 permutations and 5 repeats; use smoke mode for reduced execution tests.")
+    if args.max_final_shap_models is not None and args.max_final_shap_models < 1:
+        parser.error("--max-final-shap-models must be a positive integer")
 
     py = resolve_python(args.python)
     handoff_root = Path(args.handoff_root).resolve()
@@ -259,6 +267,9 @@ def main() -> int:
             "--mode", "full",
             "--n-repeats", "10",
             "--n-estimators", "120",]
+
+    if args.max_final_shap_models is not None:
+        step07_mode_args.extend(["--max-final-shap-models", str(args.max_final_shap_models)])
 
     scripts = {
         "01": required_script("01_validate_inputs.py"),
@@ -395,6 +406,7 @@ def main() -> int:
         "handoff_root": str(handoff_root),
         "log_root": str(log_root),
         "python": py,
+        "max_final_shap_models": args.max_final_shap_models,
         "max_workers_requested": int(args.max_workers),
         "max_workers_policy": "step09_auto" if int(args.max_workers) <= 0 else "step09_user_requested",
         "step09_n_shuffles": int(n_shuffles),
