@@ -456,6 +456,8 @@ Full run example:
 
 The smoke test should be run before a full cohort run. A smoke test is a lightweight end-to-end check that confirms the pipeline can execute and produce the expected output structure; it is not a full biological validation.
 
+**Treatment-model limit:** New V2 training runs have no default cap on final SHAP models: every model passing the final development criteria can proceed to fitting and curation. To reproduce the original study's top-30 selection policy, append `--max-final-shap-models 30` to the V2 run command. Researchers may specify any positive limit. This option affects retraining and downstream model selection, **not prediction on new samples using saved models**. Uncapped full runs can require considerably more computation.
+
 `--max-workers 0` lets Step 09 select an automatic worker count while keeping individual XGBoost fits single-threaded inside each worker.
 
 ## Running the prediction interpretation model
