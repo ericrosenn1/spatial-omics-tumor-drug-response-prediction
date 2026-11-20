@@ -15,6 +15,8 @@ if ($LASTEXITCODE -ne 0) { throw "Spatial modeling failed" }
 
 Use a new output folder. Full mode requires 1,000 permutations and five repeated 80:20 splits; reduced settings are rejected. `--mode smoke` uses smaller screening/validation settings for execution checks, not scientific reproduction. For a short data-independent test, run `python scripts/run_smoke.py --output local/smoke` instead.
 
+**Final treatment-model selection:** Step 07 screens eligible treatments and retains every treatment passing its final-model development criteria by default. There is no default numerical cap on final SHAP models. To limit final SHAP fitting, pass `--max-final-shap-models N` (where `N` is a positive integer) to the full-run orchestrator. For example, `--max-final-shap-models 30` reproduces the original study's top-30 selection policy; omit the argument for a new cohort to retain all qualifying models. This argument affects model fitting and downstream curation/validation, **not inference with previously saved models**. An uncapped full run may require substantially more compute and storage.
+
 The runner keeps the active Python interpreter; `--python` is an explicit override. Two validation workers are the default. Each worker uses one XGBoost thread.
 
 ## Stages and model definitions
